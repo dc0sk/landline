@@ -2,10 +2,11 @@
 title: Secure-First Revised Plan
 project: landline
 doc_type: implementation-plan
+license: AGPL-3.0-only
 status: draft
-version: 0.3.0
+version: 0.5.0
 owner: ""
-last_updated: 2026-05-12
+last_updated: 2026-05-13
 security_first: true
 container_evaluation: true
 documentation_first: true
@@ -21,7 +22,9 @@ Build a Rust-based web remote system for ham transceivers where security is a re
   - Test specification document (test strategy, levels, traceability matrix, acceptance criteria).
   - Product backlog (epics, features, user stories, priorities, dependencies, definition of done).
   - Roadmap and release/phase plan (milestones, scope per phase, entry/exit gates, release criteria).
+- Maintain a governance charter from the start that defines security-first release rules and exception handling.
 - Keep all artifacts versioned in docs and updated at every phase gate.
+- Adopt AGPL-3.0-only licensing from project inception and include LICENSE + documentation notices as release-gated artifacts.
 
 **Steps**
 1. Establish project documentation framework and governance first.  
@@ -31,6 +34,7 @@ Actions:
 - Create docs/test-spec.md including requirement-to-test traceability IDs.
 - Create docs/backlog.md with prioritization model (Must/Should/Could/Won't or equivalent).
 - Create docs/roadmap.md with release/phase plan, milestones, and scope boundaries.
+- Create docs/governance.md with security-first policy and phase-gate governance rules.
 - Define change control: any scope, security, or architecture change must update requirements, tests, backlog, and roadmap together.
 
 2. Define non-negotiable security baseline and threat model before feature work.  
@@ -48,6 +52,9 @@ Actions:
 - Use strict server-side validation for frequency/mode/PTT requests.
 - Separate control and telemetry channels logically (can share connection but enforce message type ACLs).
 - Define reconnection/session semantics that do not bypass auth.
+- Add split-host topology support where frontend assets may be served from a different machine than the backend service.
+- Define secure inter-host transport profiles: primary WireGuard tunnel, alternative Tailscale mesh (WireGuard-based), SSH tunnel fallback only.
+- Require private-network binding and mutual peer identity checks in split-host mode.
 
 4. Build backend foundation (Rust on Raspberry Pi) with security middleware first.  
 Depends on 3.  
@@ -57,6 +64,7 @@ Actions:
 - Add rate limiting, request size limits, websocket frame limits, and CORS/origin policy.
 - Add tamper-evident audit log events for rig-changing actions.
 - Implement rig access adapter via hamlib/rigctld with command sanitization and timeout/circuit-breaker behavior.
+- Implement Raspberry Pi GPIO adapter/API to control and read at least 5 digital I/O pins.
 
 5. Build frontend with browser-wide compatibility and explicit security UX.  
 Parallel with late part of 4 after API/auth contracts are stable.  
@@ -111,6 +119,7 @@ Actions:
 - Update docs/test-spec.md with executed test evidence and pass/fail by requirement ID.
 - Re-prioritize docs/backlog.md using test outcomes, security findings, and performance data.
 - Update docs/roadmap.md with next phase entry criteria and release date confidence.
+- Verify AGPL licensing artifacts remain complete (LICENSE text present, notices present, release checklist includes license compliance gate).
 
 **Roadmap and release/phase plan**
 1. Phase 0 - Foundation and documentation
@@ -171,8 +180,9 @@ Actions:
 - Container deployment is in-scope as an evaluated delivery option, not automatically the default runtime.
 - Raspberry Pi 4/5 + Raspberry Pi OS remains the reference target; architecture should keep portability for future targets.
 - Documentation-first constraint is mandatory: requirements, tests, backlog, and roadmap are release artifacts, not optional notes.
+- Licensing baseline is mandatory: AGPL-3.0-only applies to repository contents unless explicitly documented otherwise.
 
 **Further considerations**
 1. Auth model choice for MVP: Option A static bearer tokens (simpler), Option B short-lived JWT with refresh (stronger session control). Recommendation: Option B if internet exposure is expected in first release.
-2. Remote access stance: Option A LAN/VPN-only for MVP, Option B direct internet exposure behind hardened reverse proxy. Recommendation: Option A for MVP risk reduction.
+2. Split-host secure connectivity stance: Option A WireGuard site-to-site/profile keys (fully self-hosted), Option B Tailscale mesh (WireGuard-based, easier ops), Option C SSH reverse tunnel fallback. Recommendation: Option A or B as defaults, with SSH as temporary fallback only.
 3. Container runtime target: Option A Docker/Compose (common), Option B Podman rootless (security-oriented). Recommendation: test both, prefer rootless if hardware/audio access constraints are acceptable.

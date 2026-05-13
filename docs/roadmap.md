@@ -2,10 +2,11 @@
 title: Roadmap and Release Plan
 project: landline
 doc_type: roadmap
+license: AGPL-3.0-only
 status: draft
-version: 0.1.0
+version: 0.5.0
 owner: ""
-last_updated: 2026-05-12
+last_updated: 2026-05-13
 ---
 
 # Roadmap and Release Plan
@@ -20,6 +21,7 @@ This document defines the phased development roadmap, milestone scope, entry and
 
 - **Documentation-first**: phase gates are blocked until docs are current and traceable.
 - **Security-first**: security gates are mandatory blockers at every phase; they cannot be deferred.
+- **License-first governance**: AGPL obligations are part of release readiness, not post-release cleanup.
 - **Scope discipline**: items not listed in a phase's in-scope list are not worked in that phase.
 - **Exit criteria govern release**: a phase does not close until all exit criteria are confirmed.
 
@@ -50,8 +52,9 @@ Phase 4 ─── Release Candidate & Operations
 | Backlog IDs | Deliverable |
 |---|---|
 | BL-001–004 | docs/requirements-spec.md, docs/test-spec.md, docs/backlog.md, docs/roadmap.md |
-| BL-005 | Change control procedure |
+| BL-005–006 | Change control procedure and governance charter |
 | BL-010–013 | Threat model, trust boundaries, security gates, docs/security.md |
+| BL-120–121 | AGPL license file and license notices in core project docs |
 
 ### Entry Criteria
 
@@ -64,8 +67,11 @@ Phase 4 ─── Release Candidate & Operations
 - [ ] docs/test-spec.md v1 complete with all requirement IDs mapped to at least one test case (status: Not written is acceptable at Phase 0 exit).
 - [ ] docs/backlog.md v1 complete; all Phase 1 items reviewed and assigned.
 - [ ] docs/roadmap.md v1 complete (this document).
+- [ ] docs/governance.md v1 complete with security-first governance policy and exception handling rules.
 - [ ] docs/security.md v1 complete with threat model, trust boundaries, and security gate criteria documented.
 - [ ] Security gates list approved; referenced in phase exit checklist for Phase 1.
+- [ ] Top-level LICENSE file added with AGPL-3.0-only text.
+- [ ] License notice added to core project docs.
 
 ### Risks
 
@@ -84,7 +90,7 @@ Phase 4 ─── Release Candidate & Operations
 
 | Backlog IDs | Deliverable |
 |---|---|
-| BL-020–032 | Backend: auth, rate limiting, CORS, audit log, rigctld adapter, control handlers |
+| BL-020–033 | Backend: auth, rate limiting, CORS, audit log, rigctld adapter, control handlers, GPIO control API |
 | BL-040–047 | Frontend: session bootstrap, frequency/mode/PTT/S-meter UI, WebSocket client, responsive layout |
 | BL-080–081, BL-083 | Systemd service unit, config file, cross-compiled aarch64 release binary |
 
@@ -104,12 +110,13 @@ Phase 4 ─── Release Candidate & Operations
 ### Exit Criteria
 
 - [ ] All TST-F-001–009 (rig control) pass.
+- [ ] TST-F-070 (GPIO digital I/O control on Raspberry Pi, minimum 5 pins) pass.
 - [ ] All TST-F-040–044 (auth/session) pass.
-- [ ] All TST-S-001–011 (security) pass.
+- [ ] All TST-S-001–011 and TST-S-015 (security) pass.
 - [ ] TST-NF-001 (control latency < 100 ms p95) pass on LAN.
 - [ ] TST-D-001 and TST-D-003 (Pi 4 deployment, systemd) pass.
 - [ ] Audit log verified: all rig-changing commands produce log entries with required fields.
-- [ ] No Must backlog items (BL-020–032, BL-040–047, BL-080–081, BL-083) remain open.
+- [ ] No Must backlog items (BL-020–033, BL-040–047, BL-080–081, BL-083) remain open.
 - [ ] docs/requirements-spec.md updated with any Phase 1 scope changes.
 - [ ] docs/test-spec.md updated with Phase 1 test execution records.
 
@@ -168,6 +175,7 @@ Phase 4 ─── Release Candidate & Operations
 |---|---|
 | BL-070–078 | Full audio pipeline: Pi CPAL capture, Opus encode, WSS stream, browser decode/playback; reverse path |
 | BL-090–095 | Dockerfile, compose.yml, device passthrough evaluation, latency benchmark, decision record |
+| BL-110–114 | Split-host deployment topology and secure connectivity profiles (WireGuard primary, Tailscale alternative, SSH fallback docs) |
 
 ### Entry Criteria
 
@@ -178,6 +186,9 @@ Phase 4 ─── Release Candidate & Operations
 - [ ] TST-F-030–035 (audio) pass.
 - [ ] TST-NF-002 (audio latency < 300 ms) pass on Pi 4 LAN.
 - [ ] TST-D-004–005 (container run, non-root/read-only-rootfs) pass.
+- [ ] TST-F-060–062 (split-host frontend deployment) pass.
+- [ ] TST-S-012–014 (split-host security controls) pass.
+- [ ] TST-D-007 (split-host runbook execution) pass.
 - [ ] docs/deployment.md container decision record written: accept or defer container deployment profile with rationale.
 - [ ] Audio security tests (TST-S-001, TST-F-040 for audio channel) pass.
 - [ ] No Must backlog items in Phase 3 scope remain open.
@@ -205,6 +216,7 @@ Phase 4 ─── Release Candidate & Operations
 | BL-102–103 | 24 h soak test, Pi 4 load test |
 | BL-082 | Rollback procedure |
 | BL-104–106 | Final doc alignment, ops runbook, release checklist |
+| BL-122 | License compliance check integrated in release checklist |
 
 ### Entry Criteria
 
@@ -223,6 +235,7 @@ Phase 4 ─── Release Candidate & Operations
 - [ ] docs/test-spec.md updated with all Phase 4 test execution records and final traceability.
 - [ ] Ops runbook complete and reviewed.
 - [ ] Go/no-go decision recorded in release checklist.
+- [ ] License compliance check complete (AGPL present and documented).
 
 ### Risks
 
@@ -249,4 +262,8 @@ At Phase 4 exit:
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.5.0 | 2026-05-13 | — | Added GPIO security test gate (TST-S-015) to Phase 1 exit criteria |
+| 0.4.0 | 2026-05-13 | — | Added Raspberry Pi GPIO requirement to Phase 1 scope and exit criteria |
+| 0.3.0 | 2026-05-13 | — | Added Phase 0 governance charter deliverable with security-first policy gate |
+| 0.2.0 | 2026-05-13 | — | Added AGPL governance and split-host secure deployment to phase scope and exits |
 | 0.1.0 | 2026-05-12 | — | Initial draft |

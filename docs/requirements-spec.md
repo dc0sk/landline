@@ -2,10 +2,11 @@
 title: Requirements Specification
 project: landline
 doc_type: requirements-specification
+license: AGPL-3.0-only
 status: draft
-version: 0.1.0
+version: 0.4.0
 owner: ""
-last_updated: 2026-05-12
+last_updated: 2026-05-13
 ---
 
 # Requirements Specification
@@ -23,6 +24,7 @@ This document defines the functional, non-functional, security, deployment, and 
 | Observer | Authenticated user with read-only access (spectrum, status) |
 | Backend | The Rust service running on the Raspberry Pi |
 | Client | A web browser session connected to the backend |
+| Frontend Host | A separate machine that serves frontend assets and connects to backend APIs |
 | WSS | WebSocket over TLS |
 | PTT | Push-to-transmit; activates transmitter on the rig |
 | rigctld | hamlib daemon exposing rig control over TCP |
@@ -95,6 +97,21 @@ This document defines the functional, non-functional, security, deployment, and 
 | REQ-F-052 | Audit logs shall be retained for at least 30 days | Should | Draft |
 | REQ-F-053 | Authentication failures shall be logged with client IP and timestamp | Must | Draft |
 
+### 4.6 Distributed Frontend Deployment
+
+| ID | Requirement | Priority | Status |
+|---|---|---|---|
+| REQ-F-060 | The system shall support running the frontend from a machine separate from the backend host | Must | Draft |
+| REQ-F-061 | The backend API and WSS endpoints shall be reachable by the frontend host without requiring public internet exposure | Must | Draft |
+| REQ-F-062 | The deployment shall support at least one secure private-network profile based on WireGuard-compatible tunnels (WireGuard or Tailscale) | Must | Draft |
+| REQ-F-063 | The frontend host shall be configurable to target backend API/WSS base URLs without code changes | Must | Draft |
+
+### 4.7 GPIO Digital I/O (Raspberry Pi)
+
+| ID | Requirement | Priority | Status |
+|---|---|---|---|
+| REQ-F-070 | On Raspberry Pi deployment targets, the system shall support controlling at least 5 digital GPIO pins (read state and set output level) | Must | Draft |
+
 ---
 
 ## 5. Non-Functional Requirements
@@ -143,6 +160,10 @@ This document defines the functional, non-functional, security, deployment, and 
 | REQ-S-010 | Container images (if used) shall run as a non-root user with a read-only root filesystem | Should | Draft |
 | REQ-S-011 | Container images shall be rebuilt on upstream OS/dependency security patches within 7 days | Should | Draft |
 | REQ-S-012 | Authentication credentials shall never appear in URL query strings or log output | Must | Draft |
+| REQ-S-013 | In distributed frontend deployments, backend ingress shall default to private tunnel interfaces only (not 0.0.0.0 public bind) | Must | Draft |
+| REQ-S-014 | Connections between frontend host and backend shall enforce mutual authentication (WireGuard peer keys, Tailscale identity ACLs, or mTLS) | Must | Draft |
+| REQ-S-015 | SSH tunnelling may be used only as an operator-maintained fallback mode and shall not be the default production profile | Should | Draft |
+| REQ-S-016 | GPIO control shall enforce an allowlist of configured pins; all non-allowlisted pins shall be inaccessible and default to safe startup states | Must | Draft |
 
 ---
 
@@ -170,11 +191,25 @@ This document defines the functional, non-functional, security, deployment, and 
 | REQ-D-004 | All configuration shall be sourced from a single file (default: ~/.config/landline/config.toml) | Must | Draft |
 | REQ-D-005 | The deployment shall include a documented rollback procedure | Must | Draft |
 | REQ-D-006 | The backend architecture shall not preclude future non-Pi deployment targets | Should | Draft |
+| REQ-D-007 | Deployment documentation shall include a dedicated profile for split-host operation (frontend host + backend host) with secure connectivity setup steps | Must | Draft |
+| REQ-D-008 | The recommended split-host profile shall use WireGuard or Tailscale as the primary transport; SSH tunnel profile shall be documented as fallback only | Must | Draft |
 
 ---
 
-## 9. Change History
+## 9. Licensing Requirements
+
+| ID | Requirement | Priority | Status |
+|---|---|---|---|
+| REQ-L-001 | The project shall be licensed under GNU Affero General Public License v3.0 (AGPL-3.0-only) | Must | Draft |
+| REQ-L-002 | The repository shall include a top-level LICENSE file containing the full AGPL-3.0 license text and a short license notice in key project docs | Must | Draft |
+
+---
+
+## 10. Change History
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.4.0 | 2026-05-13 | — | Added GPIO security requirement for pin allowlist and safe default startup states |
+| 0.3.0 | 2026-05-13 | — | Added Raspberry Pi GPIO digital I/O requirement (minimum 5 controllable pins) |
+| 0.2.0 | 2026-05-13 | — | Added AGPL licensing requirements and split-host frontend deployment/security requirements |
 | 0.1.0 | 2026-05-12 | — | Initial draft |

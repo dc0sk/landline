@@ -2,10 +2,11 @@
 title: Product Backlog
 project: landline
 doc_type: backlog
+license: AGPL-3.0-only
 status: draft
-version: 0.1.0
+version: 0.5.0
 owner: ""
-last_updated: 2026-05-12
+last_updated: 2026-05-13
 ---
 
 # Product Backlog
@@ -53,6 +54,8 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 | EP-08 | Deployment: native (systemd) | Phase 1 |
 | EP-09 | Deployment: container evaluation | Phase 3 |
 | EP-10 | Operations and release hardening | Phase 4 |
+| EP-11 | Split-host frontend deployment security | Phase 3 |
+| EP-12 | Licensing and compliance | Phase 0 |
 
 ---
 
@@ -67,8 +70,10 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 | BL-003 | Create backlog.md (this document) | Must | 0 | S | BL-001 | — | — | Done |
 | BL-004 | Create roadmap.md with phase/release plan | Must | 0 | S | BL-001 | — | — | In Progress |
 | BL-005 | Define change control process for doc updates | Must | 0 | S | BL-001 | — | — | Proposed |
+| BL-006 | Create governance charter with security-first policy | Must | 0 | S | BL-001 | REQ-S-*, REQ-L-* | TST-S-* | Proposed |
 
-**Acceptance Criteria — BL-005:** Change control procedure is documented in docs/contributing.md or equivalent; any PR touching requirements, tests, backlog, or roadmap must update all four artifacts together.
+**Acceptance Criteria — BL-005:** Change control procedure is documented in docs/governance.md or equivalent; any PR touching requirements, tests, backlog, or roadmap must update all four artifacts together.
+**Acceptance Criteria — BL-006:** docs/governance.md defines security-first as a release-gated governance rule and includes exception handling requirements.
 
 ---
 
@@ -102,6 +107,7 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 | BL-030 | Implement rig access mutex for concurrent clients | Must | 1 | S | BL-025 | REQ-F-010 | TST-F-009 | Proposed |
 | BL-031 | Implement rigctld reconnect/circuit-breaker | Should | 1 | M | BL-025 | REQ-NF-011 | TST-NF-011 | Proposed |
 | BL-032 | Structured tracing/logging integration | Must | 1 | S | BL-020 | REQ-S-009, REQ-S-012 | TST-S-009–010 | Proposed |
+| BL-033 | Implement Raspberry Pi GPIO control API for at least 5 digital pins | Must | 1 | M | BL-020, BL-021 | REQ-F-070, REQ-S-016 | TST-F-070, TST-S-015 | Proposed |
 
 ---
 
@@ -197,6 +203,28 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 
 ---
 
+### EP-11 — Split-host frontend deployment security
+
+| ID | Title | Priority | Phase | Est. | Deps | Req IDs | Test IDs | Status |
+|---|---|---|---|---|---|---|---|---|
+| BL-110 | Define split-host network topology (frontend host + backend host) | Must | 3 | S | BL-010 | REQ-F-060–061, REQ-D-007 | TST-F-060, TST-D-007 | Proposed |
+| BL-111 | Add WireGuard profile for frontend-host to backend-host secure connectivity | Must | 3 | M | BL-110 | REQ-F-062, REQ-S-013–014, REQ-D-008 | TST-F-062, TST-S-012–013, TST-D-007 | Proposed |
+| BL-112 | Add Tailscale profile as operator-friendly WireGuard-based alternative | Should | 3 | S | BL-110 | REQ-F-062, REQ-S-014, REQ-D-008 | TST-F-062, TST-S-013, TST-D-007 | Proposed |
+| BL-113 | Implement frontend runtime configuration for remote API/WSS endpoints | Must | 3 | S | BL-040 | REQ-F-063 | TST-F-061 | Proposed |
+| BL-114 | Document SSH tunnel profile as non-default fallback only | Should | 3 | S | BL-110 | REQ-S-015, REQ-D-008 | TST-S-014 | Proposed |
+
+---
+
+### EP-12 — Licensing and compliance
+
+| ID | Title | Priority | Phase | Est. | Deps | Req IDs | Test IDs | Status |
+|---|---|---|---|---|---|---|---|---|
+| BL-120 | Add top-level LICENSE with AGPL-3.0-only text | Must | 0 | S | — | REQ-L-001–002 | TST-L-002 | Proposed |
+| BL-121 | Add AGPL license notice in core project docs | Must | 0 | S | BL-120 | REQ-L-002 | TST-L-002 | Proposed |
+| BL-122 | Add license compliance check to release checklist | Should | 4 | S | BL-120 | REQ-L-001–002 | TST-L-001–002 | Proposed |
+
+---
+
 ## 4. Won't Have (This Release)
 
 | ID | Title | Reason |
@@ -213,4 +241,8 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.5.0 | 2026-05-13 | — | Linked GPIO backlog item to security requirement/test (allowlist + safe startup states) |
+| 0.4.0 | 2026-05-13 | — | Added Phase 1 backlog item for Raspberry Pi GPIO digital I/O control |
+| 0.3.0 | 2026-05-13 | — | Added governance charter backlog item and aligned change-control acceptance criteria |
+| 0.2.0 | 2026-05-13 | — | Added split-host secure deployment and AGPL licensing epics/items |
 | 0.1.0 | 2026-05-12 | — | Initial draft; all items at Proposed or Done |

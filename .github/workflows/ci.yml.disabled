@@ -1,0 +1,83 @@
+# landline — CI pipeline.  *** DISABLED ***
+#
+# This file is intentionally named `ci.yml.disabled`. GitHub Actions only loads
+# `.yml`/`.yaml` workflow files, so this workflow does NOT run and consumes no
+# Actions minutes. To ENABLE it:
+#
+#     git mv .github/workflows/ci.yml.disabled .github/workflows/ci.yml
+#
+# The `docs` job below mirrors the local pre-commit/pre-push hooks (frontmatter
+# check + traceability gate) and works against today's docs-only repo. The
+# `rust` job is commented out until the Axum/Tokio workspace lands.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  docs:
+    name: Docs & Traceability
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Docs frontmatter check
+        run: |
+          set -eu
+          REQUIRED_KEYS="title status version updated authors"
+          failed=0
+          for f in $(git ls-files 'docs/**/*.md' 'docs/*.md'); do
+            [ -f "$f" ] || continue
+            first_line=$(head -n 1 "$f")
+            if [ "$first_line" != "---" ]; then
+              echo "FAIL: $f does not start with a '---' frontmatter block" >&2
+              failed=1
+              continue
+            fi
+            frontmatter=$(awk 'NR==1{next} /^---[[:space:]]*$/{exit} {print}' "$f")
+            for key in $REQUIRED_KEYS; do
+              if ! printf '%s\n' "$frontmatter" | grep -Eq "^${key}:"; then
+                echo "FAIL: $f is missing required frontmatter key '${key}'" >&2
+                failed=1
+              fi
+            done
+          done
+          [ "$failed" -eq 0 ] || { echo "docs frontmatter check failed" >&2; exit 1; }
+
+      - name: Traceability gate (R3/R4)
+        run: python3 scripts/trace-gate.py
+
+  # --- Rust workspace job (enable once the Axum/Tokio workspace lands) --------
+  # rust:
+  #   name: Format, Lint, Test & Audit
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: dtolnay/rust-toolchain@stable
+  #       with:
+  #         components: rustfmt, clippy
+  #     - uses: Swatinem/rust-cache@v2
+  #     - name: Install system libraries (hamlib, libopus, ALSA)
+  #       run: sudo apt-get update && sudo apt-get install -y libhamlib-dev libopus-dev libasound2-dev pkg-config
+  #     - name: rustfmt
+  #       run: cargo fmt --all -- --check
+  #     - name: clippy
+  #       run: cargo clippy --all-targets -- -D warnings
+  #     - name: test
+  #       run: cargo test --workspace
+  #     - name: cargo audit
+  #       run: |
+  #         cargo install cargo-audit --locked
+  #         cargo audit

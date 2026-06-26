@@ -1,12 +1,10 @@
 ---
 title: Roadmap and Release Plan
-project: landline
-doc_type: roadmap
-license: AGPL-3.0-only
-status: draft
-version: 0.5.0
-owner: ""
-last_updated: 2026-05-13
+status: Draft
+version: 0.5.1
+updated: 2026-06-26
+authors:
+  - Simon Keimer (DC0SK)
 ---
 
 # Roadmap and Release Plan
@@ -51,7 +49,7 @@ Phase 4 ─── Release Candidate & Operations
 
 | Backlog IDs | Deliverable |
 |---|---|
-| BL-001–004 | docs/requirements-spec.md, docs/test-spec.md, docs/backlog.md, docs/roadmap.md |
+| BL-001–004 | docs/requirements/system-requirements.md, docs/test/test-strategy.md, docs/backlog.md, docs/roadmap.md |
 | BL-005–006 | Change control procedure and governance charter |
 | BL-010–013 | Threat model, trust boundaries, security gates, docs/security.md |
 | BL-120–121 | AGPL license file and license notices in core project docs |
@@ -63,8 +61,8 @@ Phase 4 ─── Release Candidate & Operations
 
 ### Exit Criteria
 
-- [ ] docs/requirements-spec.md v1 complete with all functional, non-functional, security, compatibility, and deployment requirements carrying IDs and priority.
-- [ ] docs/test-spec.md v1 complete with all requirement IDs mapped to at least one test case (status: Not written is acceptable at Phase 0 exit).
+- [ ] docs/requirements/system-requirements.md v1 complete with all functional, non-functional, security, compatibility, and deployment requirements carrying IDs and priority.
+- [ ] docs/test/test-strategy.md v1 complete with all requirement IDs mapped to at least one test case (status: Not written is acceptable at Phase 0 exit).
 - [ ] docs/backlog.md v1 complete; all Phase 1 items reviewed and assigned.
 - [ ] docs/roadmap.md v1 complete (this document).
 - [ ] docs/governance.md v1 complete with security-first governance policy and exception handling rules.
@@ -78,7 +76,7 @@ Phase 4 ─── Release Candidate & Operations
 | Risk | Mitigation |
 |---|---|
 | Requirements churn before Phase 1 starts | Time-box Phase 0 to 1 week; allow living updates but freeze MVP scope |
-| Security gate criteria too vague to verify | Use TST-S-* test IDs as the definition of "gate passed" |
+| Security gate criteria too vague to verify | Use TC-SEC-* test IDs as the definition of "gate passed" |
 
 ---
 
@@ -109,16 +107,16 @@ Phase 4 ─── Release Candidate & Operations
 
 ### Exit Criteria
 
-- [ ] All TST-F-001–009 (rig control) pass.
-- [ ] TST-F-070 (GPIO digital I/O control on Raspberry Pi, minimum 5 pins) pass.
-- [ ] All TST-F-040–044 (auth/session) pass.
-- [ ] All TST-S-001–011 and TST-S-015 (security) pass.
-- [ ] TST-NF-001 (control latency < 100 ms p95) pass on LAN.
-- [ ] TST-D-001 and TST-D-003 (Pi 4 deployment, systemd) pass.
+- [ ] All TC-RIG-01–TC-RIG-09 (rig control) pass.
+- [ ] TC-GPIO-01 (GPIO digital I/O control on Raspberry Pi, minimum 5 pins) pass.
+- [ ] All TC-AUTH-01–TC-AUTH-05 (auth/session) pass.
+- [ ] All TC-SEC-01–TC-SEC-11 and TC-SEC-15 (security) pass.
+- [ ] TC-PERF-01 (control latency < 100 ms p95) pass on LAN.
+- [ ] TC-DEPLOY-01 and TC-DEPLOY-03 (Pi 4 deployment, systemd) pass.
 - [ ] Audit log verified: all rig-changing commands produce log entries with required fields.
 - [ ] No Must backlog items (BL-020–033, BL-040–047, BL-080–081, BL-083) remain open.
-- [ ] docs/requirements-spec.md updated with any Phase 1 scope changes.
-- [ ] docs/test-spec.md updated with Phase 1 test execution records.
+- [ ] docs/requirements/system-requirements.md updated with any Phase 1 scope changes.
+- [ ] docs/test/test-strategy.md updated with Phase 1 test execution records.
 
 ### Risks
 
@@ -147,13 +145,13 @@ Phase 4 ─── Release Candidate & Operations
 
 ### Exit Criteria
 
-- [ ] TST-F-020–023 (spectrum/waterfall) pass on Firefox and Chromium desktop.
-- [ ] TST-F-023 (iOS Safari Canvas rendering) pass.
-- [ ] TST-C-001–007 (full browser matrix) complete with pass status.
-- [ ] TST-F-032–033 (audio device selector) pass on at least Firefox desktop, Chrome Android, and Safari iOS.
-- [ ] Spectrum update rate ≥ 2 Hz verified on Pi 4 under load (REQ-NF-005).
+- [ ] TC-SPEC-01–TC-SPEC-04 (spectrum/waterfall) pass on Firefox and Chromium desktop.
+- [ ] TC-SPEC-04 (iOS Safari Canvas rendering) pass.
+- [ ] TC-COMPAT-01–TC-COMPAT-07 (full browser matrix) complete with pass status.
+- [ ] TC-AUD-03–TC-AUD-04 (audio device selector) pass on at least Firefox desktop, Chrome Android, and Safari iOS.
+- [ ] Spectrum update rate ≥ 2 Hz verified on Pi 4 under load (NFR-PERF-05).
 - [ ] No Must backlog items in Phase 2 scope remain open.
-- [ ] docs/test-spec.md updated with Phase 2 test execution records.
+- [ ] docs/test/test-strategy.md updated with Phase 2 test execution records.
 
 ### Risks
 
@@ -183,16 +181,16 @@ Phase 4 ─── Release Candidate & Operations
 
 ### Exit Criteria
 
-- [ ] TST-F-030–035 (audio) pass.
-- [ ] TST-NF-002 (audio latency < 300 ms) pass on Pi 4 LAN.
-- [ ] TST-D-004–005 (container run, non-root/read-only-rootfs) pass.
-- [ ] TST-F-060–062 (split-host frontend deployment) pass.
-- [ ] TST-S-012–014 (split-host security controls) pass.
-- [ ] TST-D-007 (split-host runbook execution) pass.
+- [ ] TC-AUD-01–TC-AUD-06 (audio) pass.
+- [ ] TC-PERF-02 (audio latency < 300 ms) pass on Pi 4 LAN.
+- [ ] TC-DEPLOY-04–TC-DEPLOY-05 (container run, non-root/read-only-rootfs) pass.
+- [ ] TC-HOST-01–TC-HOST-03 (split-host frontend deployment) pass.
+- [ ] TC-SEC-12–TC-SEC-14 (split-host security controls) pass.
+- [ ] TC-DEPLOY-07 (split-host runbook execution) pass.
 - [ ] docs/deployment.md container decision record written: accept or defer container deployment profile with rationale.
-- [ ] Audio security tests (TST-S-001, TST-F-040 for audio channel) pass.
+- [ ] Audio security tests (TC-SEC-01, TC-AUTH-01 for audio channel) pass.
 - [ ] No Must backlog items in Phase 3 scope remain open.
-- [ ] docs/test-spec.md updated with Phase 3 test execution records.
+- [ ] docs/test/test-strategy.md updated with Phase 3 test execution records.
 
 ### Risks
 
@@ -225,14 +223,14 @@ Phase 4 ─── Release Candidate & Operations
 
 ### Exit Criteria
 
-- [ ] TST-NF-005 (24 h soak) pass on Pi 4.
-- [ ] TST-NF-004 (CPU < 50 % under 3-client load) pass.
-- [ ] TST-D-006 (rollback procedure) pass.
-- [ ] TST-S-001 (HTTPS/WSS enforcement via nginx) pass.
+- [ ] TC-REL-03 (24 h soak) pass on Pi 4.
+- [ ] TC-PERF-04 (CPU < 50 % under 3-client load) pass.
+- [ ] TC-DEPLOY-06 (rollback procedure) pass.
+- [ ] TC-SEC-01 (HTTPS/WSS enforcement via nginx) pass.
 - [ ] Every requirement with status Must or Should has at least one test with status Pass.
 - [ ] No open Must-priority backlog items.
-- [ ] docs/requirements-spec.md updated to reflect final shipped scope.
-- [ ] docs/test-spec.md updated with all Phase 4 test execution records and final traceability.
+- [ ] docs/requirements/system-requirements.md updated to reflect final shipped scope.
+- [ ] docs/test/test-strategy.md updated with all Phase 4 test execution records and final traceability.
 - [ ] Ops runbook complete and reviewed.
 - [ ] Go/no-go decision recorded in release checklist.
 - [ ] License compliance check complete (AGPL present and documented).
@@ -262,7 +260,8 @@ At Phase 4 exit:
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
-| 0.5.0 | 2026-05-13 | — | Added GPIO security test gate (TST-S-015) to Phase 1 exit criteria |
+| 0.5.1 | 2026-06-26 | DC0SK | Migrated to area-coded FR/NFR/TC ids and new doc-tree frontmatter. |
+| 0.5.0 | 2026-05-13 | — | Added GPIO security test gate (TC-SEC-15) to Phase 1 exit criteria |
 | 0.4.0 | 2026-05-13 | — | Added Raspberry Pi GPIO requirement to Phase 1 scope and exit criteria |
 | 0.3.0 | 2026-05-13 | — | Added Phase 0 governance charter deliverable with security-first policy gate |
 | 0.2.0 | 2026-05-13 | — | Added AGPL governance and split-host secure deployment to phase scope and exits |

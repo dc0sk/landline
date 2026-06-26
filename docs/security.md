@@ -1,12 +1,10 @@
 ---
 title: Security Model and Controls
-project: landline
-doc_type: security
-license: AGPL-3.0-only
-status: draft
-version: 0.1.0
-owner: ""
-last_updated: 2026-05-13
+status: Draft
+version: 0.1.1
+updated: 2026-06-26
+authors:
+  - Simon Keimer (DC0SK)
 ---
 
 # Security Model and Controls
@@ -66,10 +64,10 @@ Out of scope for MVP:
 - GPIO actions are role-gated and auditable.
 
 Mapped IDs:
-- REQ-F-070
-- REQ-S-016
-- TST-F-070
-- TST-S-015
+- FR-GPIO-01
+- NFR-SEC-16
+- TC-GPIO-01
+- TC-SEC-15
 
 ## 7. Security Release Gates
 
@@ -77,12 +75,12 @@ A release is blocked if any applicable security test fails.
 
 | Gate | Requirement IDs | Test IDs |
 |---|---|---|
-| Transport security | REQ-S-001 | TST-S-001 |
-| Session and token safety | REQ-S-002, REQ-S-012 | TST-S-002, TST-S-010 |
-| Command and payload hardening | REQ-S-004, REQ-S-005, REQ-S-008 | TST-S-004, TST-S-005, TST-S-008, TST-S-011 |
-| Access control and safety controls | REQ-S-007, REQ-F-043 | TST-S-007, TST-F-043 |
-| Split-host security posture | REQ-S-013, REQ-S-014, REQ-S-015 | TST-S-012, TST-S-013, TST-S-014 |
-| GPIO safety controls | REQ-S-016 | TST-S-015 |
+| Transport security | NFR-SEC-01 | TC-SEC-01 |
+| Session and token safety | NFR-SEC-02, NFR-SEC-12 | TC-SEC-02, TC-SEC-10 |
+| Command and payload hardening | NFR-SEC-04, NFR-SEC-05, NFR-SEC-08 | TC-SEC-04, TC-SEC-05, TC-SEC-08, TC-SEC-11 |
+| Access control and safety controls | NFR-SEC-07, FR-AUTH-04 | TC-SEC-07, TC-AUTH-04 |
+| Split-host security posture | NFR-SEC-13, NFR-SEC-14, NFR-SEC-15 | TC-SEC-12, TC-SEC-13, TC-SEC-14 |
+| GPIO safety controls | NFR-SEC-16 | TC-SEC-15 |
 
 ## 8. Secrets and Key Handling
 
@@ -102,4 +100,5 @@ A release is blocked if any applicable security test fails.
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.1.1 | 2026-06-26 | DC0SK | Migrated to area-coded FR/NFR/TC ids and new doc-tree frontmatter. |
 | 0.1.0 | 2026-05-13 | - | Initial security model and controls document |

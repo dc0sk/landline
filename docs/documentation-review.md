@@ -1,12 +1,10 @@
 ---
 title: Documentation Review and Improvement Ideas
-project: landline
-doc_type: documentation-review
-license: AGPL-3.0-only
-status: draft
-version: 0.1.0
-owner: ""
-last_updated: 2026-05-13
+status: Draft
+version: 0.1.1
+updated: 2026-06-26
+authors:
+  - Simon Keimer (DC0SK)
 ---
 
 # Documentation Review and Improvement Ideas
@@ -19,39 +17,41 @@ This document captures documentation gaps, strengths, and practical improvements
 
 - docs/security.md was referenced by roadmap/plan but not present.
 - Split-host deployment verification existed, but security model details were not centrally documented.
+- A documentation & requirements-engineering process doc (docs/README.md) now defines the doc tree, frontmatter conventions, and RE workflow.
+- Upstream requirements layering is now present: docs/requirements/vision-and-scope.md and docs/requirements/stakeholder-requirements.md establish stakeholder needs ahead of system requirements.
+- A concept/architecture document (docs/concept/architecture.md) now records architecture elements and Architecture Decision Records (ADRs).
+- The area-coded ID scheme (FR-/NFR-/TC- by area) and the R1–R5 traceability gate (scripts/trace-gate) are now defined and enforced as a build-breaking invariant.
 
 ## 3. Current Strengths
 
-- Strong requirement-to-test traceability culture.
+- Strong requirement-to-test traceability culture, now enforced by an automated gate.
 - Security-first governance is explicitly defined.
 - Deployment profiles include concrete command templates.
 - Roadmap phase gates are clear and test-driven.
+- Layered, traceable doc tree from stakeholder needs down to test cases.
 
 ## 4. High-Value Next Additions
 
-1. Architecture Decision Records (ADR)
-- Add docs/adr/ for key choices (transport, auth model, GPIO implementation strategy, deployment mode decision).
-
-2. Configuration Reference
+1. Configuration Reference
 - Add docs/config-reference.md listing all runtime keys, defaults, valid ranges, and security implications.
 
-3. API Contract
+2. API Contract
 - Add docs/api-contract.md for endpoint/message schemas, auth requirements, and error models.
 
-4. Operations Runbook
+3. Operations Runbook
 - Add docs/operations.md for start/stop, rotate secrets, backup/restore, rollback, and incident response.
 
-5. Security Exceptions Register
+4. Security Exceptions Register
 - Add docs/security-exceptions.md template to track temporary risk acceptances with owner and expiry.
 
 ## 5. Suggested Prioritization
 
 - Immediate: config reference + API contract.
-- Near-term: ADR set for top 3 architecture decisions.
 - Before first release candidate: operations runbook + security exceptions register.
 
 ## 6. Change History
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.1.1 | 2026-06-26 | DC0SK | Moved RE-process doc, vision-and-scope, stakeholder-requirements, concept/architecture (ADRs), and the area-coded ID scheme + traceability gate to done; migrated to new doc-tree frontmatter. |
 | 0.1.0 | 2026-05-13 | - | Initial documentation review with prioritized improvement ideas |

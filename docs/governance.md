@@ -1,12 +1,10 @@
 ---
 title: Project Governance Charter
-project: landline
-doc_type: governance
-license: AGPL-3.0-only
-status: draft
-version: 0.1.0
-owner: ""
-last_updated: 2026-05-13
+status: Draft
+version: 0.1.1
+updated: 2026-06-26
+authors:
+  - Simon Keimer (DC0SK)
 ---
 
 # Project Governance Charter
@@ -45,8 +43,8 @@ Security-first means:
 ## 5. Change Control Rules
 
 Any PR that changes scope, architecture, security posture, deployment model, or release criteria must update, in the same change set:
-- docs/requirements-spec.md
-- docs/test-spec.md
+- docs/requirements/system-requirements.md
+- docs/test/test-strategy.md
 - docs/backlog.md
 - docs/roadmap.md
 - docs/governance.md when governance policy is impacted
@@ -69,4 +67,5 @@ Before release:
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.1.1 | 2026-06-26 | DC0SK | Migrated to area-coded FR/NFR/TC ids and new doc-tree frontmatter. |
 | 0.1.0 | 2026-05-13 | - | Initial governance charter with security-first policy |

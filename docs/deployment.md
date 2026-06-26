@@ -1,12 +1,10 @@
 ---
 title: Deployment Profiles and Decision Record
-project: landline
-doc_type: deployment-decision
-license: AGPL-3.0-only
-status: draft
-version: 0.3.0
-owner: ""
-last_updated: 2026-05-13
+status: Draft
+version: 0.3.1
+updated: 2026-06-26
+authors:
+  - Simon Keimer (DC0SK)
 ---
 
 # Deployment Profiles and Decision Record
@@ -26,17 +24,17 @@ This file provides:
 
 ### Requirements covered
 
-- REQ-F-060, REQ-F-061, REQ-F-062, REQ-F-063
-- REQ-S-013, REQ-S-014, REQ-S-015
-- REQ-D-007, REQ-D-008
-- REQ-L-002
+- FR-HOST-01, FR-HOST-02, FR-HOST-03, FR-HOST-04
+- NFR-SEC-13, NFR-SEC-14, NFR-SEC-15
+- NFR-DEPLOY-07, NFR-DEPLOY-08
+- NFR-LIC-02
 
 ### Tests covered
 
-- TST-F-060, TST-F-061, TST-F-062
-- TST-S-012, TST-S-013, TST-S-014
-- TST-D-007
-- TST-L-002
+- TC-HOST-01, TC-HOST-02, TC-HOST-03
+- TC-SEC-12, TC-SEC-13, TC-SEC-14
+- TC-DEPLOY-07
+- TC-LIC-02
 
 ## 3. Decision Summary
 
@@ -56,9 +54,9 @@ Current decision status:
 Applies to all profiles:
 - Backend host (Pi) runs API/WSS service.
 - Frontend host serves static frontend assets and connects to backend over secure channel.
-- Frontend endpoint base URLs are runtime-configurable (REQ-F-063).
-- Backend does not bind public interfaces by default in split-host mode (REQ-S-013).
-- Mutual peer identity is required (REQ-S-014).
+- Frontend endpoint base URLs are runtime-configurable (FR-HOST-04).
+- Backend does not bind public interfaces by default in split-host mode (NFR-SEC-13).
+- Mutual peer identity is required (NFR-SEC-14).
 - No credentials in URL query strings or logs.
 
 Required runtime parameters:
@@ -172,12 +170,12 @@ export LANDLINE_WSS_BASE_URL="wss://10.20.30.1/ws"
 
 ### Verification
 
-- TST-F-060: split-host control and telemetry works.
-- TST-F-061: runtime endpoint switch works without rebuild.
-- TST-F-062: traffic flows through WireGuard tunnel.
-- TST-S-012: backend not exposed on public bind.
-- TST-S-013: unknown peer cannot connect.
-- TST-D-007: runbook execution succeeds.
+- TC-HOST-01: split-host control and telemetry works.
+- TC-HOST-02: runtime endpoint switch works without rebuild.
+- TC-HOST-03: traffic flows through WireGuard tunnel.
+- TC-SEC-12: backend not exposed on public bind.
+- TC-SEC-13: unknown peer cannot connect.
+- TC-DEPLOY-07: runbook execution succeeds.
 
 ## 6. Profile B - Tailscale (Alternative)
 
@@ -262,16 +260,16 @@ export LANDLINE_WSS_BASE_URL="wss://backend-host.tailnet-name.ts.net/ws"
 
 ### Verification
 
-- TST-F-060: split-host control and telemetry works.
-- TST-F-061: runtime endpoint switch works without rebuild.
-- TST-F-062: traffic flows through Tailscale (WireGuard-based) path.
-- TST-S-012: backend not exposed on public bind.
-- TST-S-013: unauthorized identity denied by ACL.
-- TST-D-007: runbook execution succeeds.
+- TC-HOST-01: split-host control and telemetry works.
+- TC-HOST-02: runtime endpoint switch works without rebuild.
+- TC-HOST-03: traffic flows through Tailscale (WireGuard-based) path.
+- TC-SEC-12: backend not exposed on public bind.
+- TC-SEC-13: unauthorized identity denied by ACL.
+- TC-DEPLOY-07: runbook execution succeeds.
 
 ## 7. Profile C - SSH Tunnel (Fallback Only)
 
-This profile is not production-default (REQ-S-015, REQ-D-008).
+This profile is not production-default (NFR-SEC-15, NFR-DEPLOY-08).
 
 ### Topology
 
@@ -356,10 +354,10 @@ export LANDLINE_WSS_BASE_URL="wss://127.0.0.1:8443/ws"
 
 ### Verification
 
-- TST-F-060: split-host control and telemetry works through tunnel.
-- TST-F-061: runtime endpoint switch works without rebuild.
-- TST-S-014: fallback mode documented and disabled by default.
-- TST-D-007: fallback runbook executes successfully when enabled.
+- TC-HOST-01: split-host control and telemetry works through tunnel.
+- TC-HOST-02: runtime endpoint switch works without rebuild.
+- TC-SEC-14: fallback mode documented and disabled by default.
+- TC-DEPLOY-07: fallback runbook executes successfully when enabled.
 
 ## 8. Selection Guidance
 
@@ -372,7 +370,7 @@ Choose profile by environment:
 
 Use this section to execute repeatable checks for split-host tests.
 
-### TST-F-060 - Split-host control and telemetry
+### TC-HOST-01 - Split-host control and telemetry
 
 Frontend host:
 
@@ -382,7 +380,7 @@ curl -sS "$LANDLINE_API_BASE_URL/health"
 
 Expected result: HTTP 200-equivalent response from backend through selected profile.
 
-### TST-F-061 - Runtime endpoint switch without rebuild
+### TC-HOST-02 - Runtime endpoint switch without rebuild
 
 Frontend host:
 
@@ -394,7 +392,7 @@ curl -sS "$LANDLINE_API_BASE_URL/health"
 
 Expected result: frontend uses new endpoint after restart/reload with no frontend rebuild.
 
-### TST-F-062 - Transport path validation
+### TC-HOST-03 - Transport path validation
 
 WireGuard profile:
 
@@ -412,7 +410,7 @@ tailscale ping <BACKEND_TAILNET_NAME_OR_IP>
 
 Expected result: active session and successful connectivity over selected private transport.
 
-### TST-S-012 - Backend bind exposure check
+### TC-SEC-12 - Backend bind exposure check
 
 Backend host:
 
@@ -423,7 +421,7 @@ ip -br a
 
 Expected result: API/WSS listener bound only to tunnel interface or loopback strategy, not public wildcard bind.
 
-### TST-S-013 - Unauthorized peer/identity denial
+### TC-SEC-13 - Unauthorized peer/identity denial
 
 WireGuard profile (untrusted source host):
 
@@ -439,7 +437,7 @@ curl -vk --connect-timeout 5 https://<BACKEND_TAILNET_NAME_OR_IP>/health
 
 Expected result: access denied or unreachable from unauthorized peer/identity.
 
-### TST-S-014 - SSH fallback disabled by default
+### TC-SEC-14 - SSH fallback disabled by default
 
 Frontend host:
 
@@ -450,7 +448,7 @@ systemctl --user status landline-ssh-tunnel.service || true
 
 Expected result: no active SSH fallback tunnel unless explicitly enabled for maintenance.
 
-### TST-D-007 - Runbook execution
+### TC-DEPLOY-07 - Runbook execution
 
 Operator checklist:
 - Bring selected profile up.
@@ -463,6 +461,7 @@ Expected result: profile setup and verification complete with captured evidence.
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.3.1 | 2026-06-26 | DC0SK | Migrated to area-coded FR/NFR/TC ids and new doc-tree frontmatter. |
 | 0.3.0 | 2026-05-13 | - | Added test-oriented validation command checklist for split-host profiles |
 | 0.2.0 | 2026-05-13 | - | Added concrete command/config templates for WireGuard, Tailscale ACLs, and SSH fallback |
 | 0.1.0 | 2026-05-13 | - | Initial deployment decision document with WireGuard, Tailscale, and SSH profiles |

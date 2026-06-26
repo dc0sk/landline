@@ -1,16 +1,20 @@
 ---
-title: Secure-First Revised Plan
-project: landline
-doc_type: implementation-plan
-license: AGPL-3.0-only
-status: draft
-version: 0.5.0
-owner: ""
-last_updated: 2026-05-13
-security_first: true
-container_evaluation: true
-documentation_first: true
+title: "Secure-First Revised Plan (superseded)"
+status: Withdrawn
+version: "0.5.1"
+updated: 2026-06-26
+authors:
+  - Simon Keimer (DC0SK)
 ---
+
+> **Status: Withdrawn / historical.** This early implementation plan has been superseded by
+> the formal RE baseline. Its scope and phasing now live in
+> [roadmap.md](roadmap.md); its design decisions are recorded as ADRs in
+> [concept/architecture.md](concept/architecture.md); requirements are in
+> [requirements/system-requirements.md](requirements/system-requirements.md). Retained for
+> provenance only — not a current source of truth.
+
+License notice: This project is licensed under AGPL-3.0-only. See the top-level LICENSE file.
 
 ## Plan: Secure Hamradio Web Remote
 
@@ -30,8 +34,8 @@ Build a Rust-based web remote system for ham transceivers where security is a re
 1. Establish project documentation framework and governance first.  
 Dependencies: blocks all implementation and design decisions.  
 Actions:
-- Create docs/requirements-spec.md as the source of truth for product and engineering requirements.
-- Create docs/test-spec.md including requirement-to-test traceability IDs.
+- Create docs/requirements/system-requirements.md as the source of truth for product and engineering requirements.
+- Create docs/test/test-strategy.md including requirement-to-test traceability IDs.
 - Create docs/backlog.md with prioritization model (Must/Should/Could/Won't or equivalent).
 - Create docs/roadmap.md with release/phase plan, milestones, and scope boundaries.
 - Create docs/governance.md with security-first policy and phase-gate governance rules.
@@ -115,8 +119,8 @@ Actions:
 9. Documentation-driven release management.  
 Depends on 1-8 and is enforced at every phase boundary.  
 Actions:
-- Update docs/requirements-spec.md with implemented scope, deferred scope, and requirement status.
-- Update docs/test-spec.md with executed test evidence and pass/fail by requirement ID.
+- Update docs/requirements/system-requirements.md with implemented scope, deferred scope, and requirement status.
+- Update docs/test/test-strategy.md with executed test evidence and pass/fail by requirement ID.
 - Re-prioritize docs/backlog.md using test outcomes, security findings, and performance data.
 - Update docs/roadmap.md with next phase entry criteria and release date confidence.
 - Verify AGPL licensing artifacts remain complete (LICENSE text present, notices present, release checklist includes license compliance gate).
@@ -145,8 +149,8 @@ Actions:
 - Definition of done: implementation complete, security checks passed, tests added/executed, documentation updated.
 
 **Relevant files**
-- docs/requirements-spec.md - formal requirements specification with IDs and status.
-- docs/test-spec.md - test strategy, test catalog, and requirement traceability.
+- docs/requirements/system-requirements.md - formal requirements specification with IDs and status.
+- docs/test/test-strategy.md - test strategy, test catalog, and requirement traceability.
 - docs/backlog.md - prioritized product/engineering backlog with dependencies.
 - docs/roadmap.md - release/phase planning, milestones, and gate criteria.
 - backend/src/main.rs - API bootstrap, middleware, websocket lifecycle.
@@ -165,7 +169,7 @@ Actions:
 - docs/deployment.md - native vs container decision record and runbooks.
 
 **Verification**
-1. Verify each requirement ID has at least one mapped test in docs/test-spec.md.
+1. Verify each requirement ID has at least one mapped test in docs/test/test-strategy.md.
 2. Run backend tests and static checks (unit + integration + lint) with security tests as mandatory blockers.
 3. Execute browser compatibility test suite across desktop/mobile targets and verify audio device selection flows.
 4. Perform websocket fuzz/malformed-frame tests and confirm no panic, no unauthorized state mutation.

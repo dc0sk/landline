@@ -1,0 +1,22 @@
+# Rust build artifacts (once the Axum/Tokio backend workspace lands)
+/target
+**/*.rs.bk
+
+# Node / TypeScript frontend
+node_modules/
+dist/
+
+# Python cache (scripts/trace-gate.py and friends)
+__pycache__/
+*.pyc
+
+# Local secrets & machine-specific config — never commit credentials, TLS keys,
+# WireGuard/JWT material, or a host's local override config
+*.key
+*.pem
+.env
+config.local.toml
+
+# Editor / OS noise
+.DS_Store
+*.swp

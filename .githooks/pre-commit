@@ -1,0 +1,56 @@
+#!/usr/bin/env sh
+# landline pre-commit hook.
+# Enable once per clone with:  git config core.hooksPath .githooks
+#
+# Runs today (docs-only repo):
+#   1. docs frontmatter check  — every tracked docs/**/*.md must start with a
+#      `---` line and its YAML frontmatter must carry the required keys.
+#   2. python3 scripts/trace-gate.py  — requirement -> test traceability (R3/R4).
+#
+# The Rust steps below are commented out until the Axum/Tokio workspace lands.
+set -eu
+
+# --- 1. docs frontmatter check -------------------------------------------------
+# Required keys in the YAML frontmatter of every docs/*.md file.
+REQUIRED_KEYS="title status version updated authors"
+
+echo "[pre-commit] docs frontmatter check"
+fm_failed=0
+# Only tracked Markdown files under docs/ are checked.
+for f in $(git ls-files 'docs/**/*.md' 'docs/*.md'); do
+	[ -f "$f" ] || continue
+
+	# (a) the file must start with a `---` frontmatter fence.
+	first_line=$(head -n 1 "$f")
+	if [ "$first_line" != "---" ]; then
+		echo "[pre-commit] FAIL: $f does not start with a '---' frontmatter block" >&2
+		fm_failed=1
+		continue
+	fi
+
+	# (b) extract the frontmatter block (between the first and second `---`)
+	#     and assert each required key is present as `key:`.
+	frontmatter=$(awk 'NR==1{next} /^---[[:space:]]*$/{exit} {print}' "$f")
+	for key in $REQUIRED_KEYS; do
+		if ! printf '%s\n' "$frontmatter" | grep -Eq "^${key}:"; then
+			echo "[pre-commit] FAIL: $f is missing required frontmatter key '${key}'" >&2
+			fm_failed=1
+		fi
+	done
+done
+if [ "$fm_failed" -ne 0 ]; then
+	echo "[pre-commit] docs frontmatter check failed" >&2
+	exit 1
+fi
+
+# --- 2. traceability gate (R3/R4) ---------------------------------------------
+echo "[pre-commit] python3 scripts/trace-gate.py"
+python3 scripts/trace-gate.py
+
+# --- Rust workspace steps (enable once the workspace lands) -------------------
+# echo "[pre-commit] cargo fmt --all -- --check"
+# cargo fmt --all -- --check
+# echo "[pre-commit] cargo clippy --all-targets -- -D warnings"
+# cargo clippy --all-targets -- -D warnings
+
+echo "[pre-commit] OK"

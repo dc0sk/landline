@@ -21,6 +21,31 @@ pub struct Config {
     pub server: ServerConfig,
     /// Authentication, session, and RBAC settings (ARC-02).
     pub auth: AuthConfig,
+    /// Security middleware settings (ARC-03).
+    pub security: SecurityConfig,
+}
+
+/// Security middleware configuration (ARC-03).
+#[derive(Debug, Clone, Deserialize)]
+#[serde(default)]
+pub struct SecurityConfig {
+    /// Per-client control-endpoint rate limit, commands/second (NFR-SEC-04).
+    pub rate_limit_per_sec: u32,
+    /// Maximum accepted request body size in bytes (NFR-SEC-05, default 64 KiB).
+    pub max_body_bytes: usize,
+    /// CORS origin allowlist; only these origins are permitted (NFR-SEC-06).
+    /// Empty means no cross-origin requests are allowed.
+    pub allowed_origins: Vec<String>,
+}
+
+impl Default for SecurityConfig {
+    fn default() -> Self {
+        Self {
+            rate_limit_per_sec: 10,
+            max_body_bytes: 64 * 1024,
+            allowed_origins: Vec::new(),
+        }
+    }
 }
 
 /// Authentication and session configuration (ARC-02).

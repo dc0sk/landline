@@ -33,7 +33,9 @@ async fn main() -> ExitCode {
     };
     tracing::info!(%addr, "landline backend listening");
 
-    if let Err(err) = axum::serve(listener, app)
+    // Connect-info makes the peer address available to the rate limiter (ARC-03).
+    let service = app.into_make_service_with_connect_info::<std::net::SocketAddr>();
+    if let Err(err) = axum::serve(listener, service)
         .with_graceful_shutdown(shutdown_signal())
         .await
     {

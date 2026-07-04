@@ -1,7 +1,7 @@
 ---
 title: Product Backlog
 status: Draft
-version: 0.5.4
+version: 0.5.5
 updated: 2026-07-04
 authors:
   - Simon Keimer (DC0SK)
@@ -95,8 +95,8 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 |---|---|---|---|---|---|---|---|---|
 | BL-020 | Initialize Rust workspace: Tokio + Axum + Tower | Must | 1 | S | BL-011 | NFR-MAINT-01 | — | Done |
 | BL-021 | Implement auth middleware (JWT, expiry, role claims) | Must | 1 | M | BL-020, BL-012 | FR-AUTH-01–FR-AUTH-05, NFR-SEC-01–NFR-SEC-02 | TC-AUTH-01–TC-AUTH-05, TC-SEC-01–TC-SEC-02 | In Progress |
-| BL-022 | Implement rate limiting and frame/size limits | Must | 1 | S | BL-021 | NFR-SEC-04–NFR-SEC-05 | TC-SEC-04–TC-SEC-05 | Proposed |
-| BL-023 | Implement CORS origin policy | Must | 1 | S | BL-021 | NFR-SEC-06 | TC-SEC-06 | Proposed |
+| BL-022 | Implement rate limiting and frame/size limits | Must | 1 | S | BL-021 | NFR-SEC-04–NFR-SEC-05 | TC-SEC-04–TC-SEC-05 | In Progress |
+| BL-023 | Implement CORS origin policy | Must | 1 | S | BL-021 | NFR-SEC-06 | TC-SEC-06 | Done |
 | BL-024 | Implement audit log subsystem | Must | 1 | M | BL-020 | FR-AUDIT-01–FR-AUDIT-04 | TC-AUDIT-01–TC-AUDIT-02 | Proposed |
 | BL-025 | Implement rigctld TCP adapter with command sanitisation | Must | 1 | M | BL-020 | FR-RIG-08–FR-RIG-09 | TC-RIG-07–TC-RIG-08 | Proposed |
 | BL-026 | Implement frequency read/set handlers | Must | 1 | S | BL-025, BL-021 | FR-RIG-01–FR-RIG-02 | TC-RIG-01–TC-RIG-02 | Proposed |
@@ -107,6 +107,8 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 | BL-031 | Implement rigctld reconnect/circuit-breaker | Should | 1 | M | BL-025 | NFR-REL-02 | TC-REL-02 | Proposed |
 | BL-032 | Structured tracing/logging integration | Must | 1 | S | BL-020 | NFR-SEC-09, NFR-SEC-12 | TC-SEC-09–TC-SEC-10 | In Progress |
 | BL-033 | Implement Raspberry Pi GPIO control API for at least 5 digital pins | Must | 1 | M | BL-020, BL-021 | FR-GPIO-01, NFR-SEC-16 | TC-GPIO-01, TC-SEC-15 | Proposed |
+
+**Note — BL-022:** In Progress. Per-client rate limiting (NFR-SEC-04) and the HTTP request body-size limit are implemented in the ARC-03 security middleware. The WebSocket **frame**-size cap (NFR-SEC-05 / TC-SEC-05) is deferred until the WS endpoints land (spectrum/audio, Phase 2/3); rate-limit keying on `X-Forwarded-For` behind the reverse proxy is a Phase-4 follow-up (BL-100/101).
 
 ---
 
@@ -240,6 +242,7 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.5.5 | 2026-07-04 | DC0SK | BL-023 (CORS) → Done; BL-022 (rate/size limits) → In Progress (rate limiting + HTTP body limit done; WS frame cap deferred to WS endpoints). ARC-03 security middleware. |
 | 0.5.4 | 2026-07-04 | DC0SK | BL-021 (auth middleware) → In Progress: ARC-02 auth/RBAC implemented (JWT + argon2 + refresh + logout); NFR-SEC-01/TC-SEC-01 (TLS transport) remain for Phase 4. |
 | 0.5.3 | 2026-07-04 | DC0SK | Phase 1 kickoff: BL-020 (workspace) and BL-083 (aarch64 cross-build) → Done; BL-032 (tracing) and BL-081 (config) → In Progress. |
 | 0.5.2 | 2026-07-04 | DC0SK | Phase 0 reconciliation: verified deliverables against repo and moved BL-004–BL-006, BL-010–BL-011, BL-013, BL-120–BL-121 to Done; BL-012 kept Proposed (rotation policy still open, see note). |

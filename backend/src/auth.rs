@@ -572,9 +572,14 @@ mod tests {
     fn tampered_signature_is_rejected() {
         let auth = auth_with("op", "s3cret", Role::Operator, 900);
         let pair = auth.login("op", "s3cret").unwrap();
-        let mut token = pair.access_token;
-        token.pop();
-        token.push(if token.ends_with('A') { 'B' } else { 'A' });
+        // Flip the first character of the signature segment. (Flipping the last
+        // base64url char is unreliable: no-pad trailing bits can decode to the
+        // same signature bytes.)
+        let dot = pair.access_token.rfind('.').unwrap();
+        let mut bytes = pair.access_token.into_bytes();
+        let i = dot + 1;
+        bytes[i] = if bytes[i] == b'A' { b'B' } else { b'A' };
+        let token = String::from_utf8(bytes).unwrap();
         assert!(matches!(auth.verify(&token), Err(AuthError::Invalid)));
     }
 

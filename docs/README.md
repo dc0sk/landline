@@ -1,8 +1,8 @@
 ---
 title: "landline — Documentation & RE Process"
 status: Draft
-version: "0.6"
-updated: 2026-06-26
+version: "0.6.1"
+updated: 2026-07-04
 authors:
   - Simon Keimer (DC0SK)
 owns: []
@@ -42,6 +42,7 @@ by a build-breaking gate.
 | [governance.md](governance.md) | Security-first / documentation-first governance, phase-gate rules, change control | — |
 | [backlog.md](backlog.md) | Prioritised product/engineering backlog with dependencies | `EP-`, `BL-` |
 | [roadmap.md](roadmap.md) | Release/phase plan, milestones, entry/exit gates | — |
+| [action-list.md](action-list.md) | Ordered, traceable action checklist per milestone (operational companion to backlog/roadmap) | — |
 | [deployment.md](deployment.md) | Split-host deployment profiles + decision record | — |
 | [documentation-review.md](documentation-review.md) | Documentation gaps and improvement backlog | — |
 
@@ -122,7 +123,7 @@ STK (need)  ──►  FR / NFR (system req)  ──►  ARC / ADR (design)  ─
 ```
 
 Tracing rules (enforced — see [test/test-strategy.md](test/test-strategy.md) §Coverage gate
-and [`scripts/trace-gate`](../scripts/trace-gate)):
+and [`scripts/trace-gate.py`](../scripts/trace-gate.py)):
 
 - **R1** Every `STK` is satisfied by ≥1 `FR`/`NFR`. (no orphan needs)
 - **R2** Every `FR`/`NFR` traces up to ≥1 `STK`. (no gold-plating)
@@ -130,7 +131,7 @@ and [`scripts/trace-gate`](../scripts/trace-gate)):
 - **R4** Every `TC` names the requirement ID(s) it verifies. (no dangling test)
 - **R5** Every implemented `FR` is realized by ≥1 named `ARC` element.
 
-`scripts/trace-gate` parses the requirement tables (SRS) and the test traceability matrix and
+`scripts/trace-gate.py` parses the requirement tables (SRS) and the test traceability matrix and
 **fails the build** on **R4** (a `TC` naming an unknown requirement) and on any **uncovered
 `M`/`S`** requirement (**R3**). `Could`-priority gaps are reported informationally. This makes
 traceability a build-breaking invariant, not a manual spreadsheet. The gate is language-agnostic
@@ -198,4 +199,5 @@ The exhaustive per-ID table is maintained alongside the migration commit; the
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.6.1 | 2026-07-04 | DC0SK | Fixed stale `scripts/trace-gate` references to the actual `scripts/trace-gate.py` path; added action-list.md to the document map. |
 | 0.6 | 2026-06-26 | DC0SK | Adopted area-coded ID scheme, layered RE doc tree (vision/stakeholder/system/concept/test), R1–R5 traceability gate, and frontmatter conventions. Migrated 0.x flat IDs (Appendix A). |

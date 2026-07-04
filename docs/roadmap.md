@@ -1,8 +1,8 @@
 ---
 title: Roadmap and Release Plan
 status: Draft
-version: 0.5.1
-updated: 2026-06-26
+version: 0.5.2
+updated: 2026-07-04
 authors:
   - Simon Keimer (DC0SK)
 ---
@@ -61,15 +61,23 @@ Phase 4 ─── Release Candidate & Operations
 
 ### Exit Criteria
 
-- [ ] docs/requirements/system-requirements.md v1 complete with all functional, non-functional, security, compatibility, and deployment requirements carrying IDs and priority.
-- [ ] docs/test/test-strategy.md v1 complete with all requirement IDs mapped to at least one test case (status: Not written is acceptable at Phase 0 exit).
-- [ ] docs/backlog.md v1 complete; all Phase 1 items reviewed and assigned.
-- [ ] docs/roadmap.md v1 complete (this document).
-- [ ] docs/governance.md v1 complete with security-first governance policy and exception handling rules.
-- [ ] docs/security.md v1 complete with threat model, trust boundaries, and security gate criteria documented.
-- [ ] Security gates list approved; referenced in phase exit checklist for Phase 1.
-- [ ] Top-level LICENSE file added with AGPL-3.0-only text.
-- [ ] License notice added to core project docs.
+- [x] docs/requirements/system-requirements.md v1 complete with all functional, non-functional, security, compatibility, and deployment requirements carrying IDs and priority.
+- [x] docs/test/test-strategy.md v1 complete with all requirement IDs mapped to at least one test case (status: Not written is acceptable at Phase 0 exit).
+- [x] docs/backlog.md v1 complete; all Phase 1 items reviewed and assigned.
+- [x] docs/roadmap.md v1 complete (this document).
+- [x] docs/governance.md v1 complete with security-first governance policy and exception handling rules.
+- [x] docs/security.md v1 complete with threat model, trust boundaries, and security gate criteria documented.
+- [x] Security gates list approved; referenced in phase exit checklist for Phase 1.
+- [x] Top-level LICENSE file added with AGPL-3.0-only text.
+- [x] License notice added to core project docs.
+
+> **Phase 0 status (2026-07-04): complete — ready for Phase 1 entry.** All exit criteria above
+> are satisfied by the existing RE baseline; the traceability gate (`scripts/trace-gate.py`) is
+> green with 78 requirements declared and all 76 Must/Should requirements covered by tests.
+> The two Could-priority requirements without a test (FR-RIG-07, FR-SPEC-04) are intentionally
+> uncovered per rule R3, which enforces coverage for Must/Should scope only. Remaining Phase 0
+> follow-up: the secrets *rotation* policy (BL-012) is deferred to before production release —
+> see docs/backlog.md note on BL-012.
 
 ### Risks
 
@@ -260,6 +268,7 @@ At Phase 4 exit:
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.5.2 | 2026-07-04 | DC0SK | Ticked all Phase 0 exit criteria (verified against existing docs) and recorded Phase 0 as complete / ready for Phase 1 entry. |
 | 0.5.1 | 2026-06-26 | DC0SK | Migrated to area-coded FR/NFR/TC ids and new doc-tree frontmatter. |
 | 0.5.0 | 2026-05-13 | — | Added GPIO security test gate (TC-SEC-15) to Phase 1 exit criteria |
 | 0.4.0 | 2026-05-13 | — | Added Raspberry Pi GPIO requirement to Phase 1 scope and exit criteria |

@@ -1,7 +1,7 @@
 ---
 title: Product Backlog
 status: Draft
-version: 0.5.8
+version: 0.5.9
 updated: 2026-07-04
 authors:
   - Simon Keimer (DC0SK)
@@ -102,11 +102,15 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 | BL-026 | Implement frequency read/set handlers | Must | 1 | S | BL-025, BL-021 | FR-RIG-01–FR-RIG-02 | TC-RIG-01–TC-RIG-02 | Done |
 | BL-027 | Implement mode read/set handlers | Must | 1 | S | BL-025, BL-021 | FR-RIG-03–FR-RIG-04 | TC-RIG-03 | Done |
 | BL-028 | Implement PTT handler with role check and safety timeout | Must | 1 | M | BL-025, BL-021 | FR-RIG-05, NFR-SEC-07 | TC-RIG-04–TC-RIG-05, TC-SEC-07 | Done |
-| BL-029 | Implement S-meter streaming | Should | 1 | S | BL-025 | FR-RIG-06 | TC-RIG-06 | Proposed |
+| BL-029 | Implement S-meter streaming | Should | 1 | S | BL-025 | FR-RIG-06 | TC-RIG-06 | In Progress |
 | BL-030 | Implement rig access mutex for concurrent clients | Must | 1 | S | BL-025 | FR-RIG-10 | TC-RIG-09 | Done |
-| BL-031 | Implement rigctld reconnect/circuit-breaker | Should | 1 | M | BL-025 | NFR-REL-02 | TC-REL-02 | Proposed |
+| BL-031 | Implement rigctld reconnect/circuit-breaker | Should | 1 | M | BL-025 | NFR-REL-02 | TC-REL-02 | Done |
 | BL-032 | Structured tracing/logging integration | Must | 1 | S | BL-020 | NFR-SEC-09, NFR-SEC-12 | TC-SEC-09–TC-SEC-10 | In Progress |
-| BL-033 | Implement Raspberry Pi GPIO control API for at least 5 digital pins | Must | 1 | M | BL-020, BL-021 | FR-GPIO-01, NFR-SEC-16 | TC-GPIO-01, TC-SEC-15 | Proposed |
+| BL-033 | Implement Raspberry Pi GPIO control API for at least 5 digital pins | Must | 1 | M | BL-020, BL-021 | FR-GPIO-01, NFR-SEC-16 | TC-GPIO-01, TC-SEC-15 | Done |
+
+**Note — BL-029:** In Progress. The S-meter read path is done (`GET /api/rig/smeter`, Observer+, FR-RIG-06 display). Continuous streaming at a configured cadence (TC-RIG-06) rides the Phase-2 WebSocket telemetry channel (ADR-02/ARC-06) alongside the spectrum stream, so it lands in Phase 2.
+
+**Note — BL-033:** Done. The ARC-08 GPIO controller enforces the pin allowlist and safe startup states (NFR-SEC-16) with Operator-gated, audited `/api/gpio/{pin}` endpoints, verified in-memory (TC-SEC-15). The Raspberry Pi sysfs/gpiod hardware backend is a thin deployment-time adapter; TC-GPIO-01 is a hardware-in-the-loop System test.
 
 **Note — BL-024:** Done. The ARC-07 audit subsystem (SHA-256 hash-chained tamper-evident events, durable append file, Admin `GET /api/audit`) logs auth failures (FR-AUDIT-04 / TC-AUDIT-02) and rig state-changes via the control handlers (FR-AUDIT-01 / TC-AUDIT-01, verified). FR-AUDIT-03 30-day retention (TC-AUDIT-03) is enforced by deployment log rotation.
 
@@ -244,6 +248,7 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.5.9 | 2026-07-04 | DC0SK | BL-031 (circuit breaker) + BL-033 (GPIO, ARC-08) → Done; BL-029 (S-meter) → In Progress (read path; streaming rides Phase-2 WS). Phase 1 backend complete. |
 | 0.5.8 | 2026-07-04 | DC0SK | BL-026/027/028 (freq/mode/PTT handlers) + BL-030 (rig mutex) → Done; BL-024 (audit) → Done (rig-action auditing now verified, TC-AUDIT-01). Rig control endpoints RBAC-gated + audited; PTT safety timeout (NFR-SEC-07). |
 | 0.5.7 | 2026-07-04 | DC0SK | BL-025 (rigctld adapter) → Done: ARC-04 typed async rigctld client with allowlist + range validation (injection-proof), serialised access, reconnect; mock-rigctld + validation tests. |
 | 0.5.6 | 2026-07-04 | DC0SK | BL-024 (audit log) → In Progress: ARC-07 hash-chained tamper-evident audit subsystem + auth-failure logging + Admin view; rig-action auditing lands with rig handlers. |

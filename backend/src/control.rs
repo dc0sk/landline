@@ -25,6 +25,7 @@ pub fn router() -> Router {
         .route("/api/rig/frequency", get(get_frequency).post(set_frequency))
         .route("/api/rig/mode", get(get_mode).post(set_mode))
         .route("/api/rig/ptt", post(set_ptt))
+        .route("/api/rig/smeter", get(get_smeter))
 }
 
 #[derive(Serialize)]
@@ -52,6 +53,24 @@ struct SetModeRequest {
 #[derive(Deserialize)]
 struct SetPttRequest {
     transmit: bool,
+}
+
+#[derive(Serialize)]
+struct SmeterResponse {
+    strength: i32,
+}
+
+async fn get_smeter(user: AuthUser, Extension(rig): Extension<Arc<RigAdapter>>) -> Response {
+    // FR-RIG-06: S-meter is readable by Operators and Observers alike. Continuous
+    // streaming at a configured cadence rides the Phase-2 WS telemetry channel
+    // (ADR-02); this is the point-read path.
+    if let Err(err) = user.require(Role::Observer) {
+        return err.into_response();
+    }
+    match rig.get_strength().await {
+        Ok(strength) => Json(SmeterResponse { strength }).into_response(),
+        Err(err) => err.into_response(),
+    }
 }
 
 async fn get_frequency(user: AuthUser, Extension(rig): Extension<Arc<RigAdapter>>) -> Response {

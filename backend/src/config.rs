@@ -12,6 +12,7 @@ use std::path::{Path, PathBuf};
 use serde::Deserialize;
 
 use crate::auth::Role;
+use crate::gpio::{Direction, Level};
 
 /// Top-level configuration, sourced from a single TOML file (NFR-DEPLOY-04).
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -27,6 +28,8 @@ pub struct Config {
     pub audit: AuditConfig,
     /// Rig adapter settings (ARC-04).
     pub rig: RigConfig,
+    /// GPIO settings (ARC-08).
+    pub gpio: GpioConfig,
 }
 
 /// Rig adapter configuration (ARC-04): how to reach hamlib/rigctld.
@@ -42,6 +45,10 @@ pub struct RigConfig {
     /// PTT safety timeout in seconds: the server auto-unkeys if PTT is left
     /// active this long without a refresh (NFR-SEC-07).
     pub ptt_timeout_secs: u64,
+    /// Consecutive failures before the circuit breaker opens (NFR-REL-02).
+    pub breaker_threshold: u32,
+    /// Circuit-breaker cooldown in milliseconds before a retry is allowed.
+    pub breaker_cooldown_ms: u64,
 }
 
 impl Default for RigConfig {
@@ -51,8 +58,32 @@ impl Default for RigConfig {
             port: 4532,
             timeout_ms: 2000,
             ptt_timeout_secs: 120,
+            breaker_threshold: 3,
+            breaker_cooldown_ms: 1000,
         }
     }
+}
+
+/// GPIO configuration (ARC-08): the allowlist of controllable pins and their
+/// safe startup states (NFR-SEC-16).
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(default)]
+pub struct GpioConfig {
+    /// Whether GPIO control is enabled (Raspberry Pi deployments).
+    pub enabled: bool,
+    /// Allowlisted pins. Any pin not listed is inaccessible (NFR-SEC-16).
+    pub pins: Vec<GpioPinConfig>,
+}
+
+/// A single allowlisted GPIO pin.
+#[derive(Debug, Clone, Deserialize)]
+pub struct GpioPinConfig {
+    /// BCM pin number.
+    pub pin: u8,
+    /// Whether the pin is an input or an output.
+    pub direction: Direction,
+    /// The safe level applied to outputs at startup (NFR-SEC-16).
+    pub safe_state: Level,
 }
 
 /// Audit log configuration (ARC-07).

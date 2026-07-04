@@ -37,6 +37,8 @@ async fn spawn_mock_rigctld() -> SocketAddr {
                         b"14074000\n"
                     } else if command == "m" {
                         b"USB\n2400\n"
+                    } else if command == "l STRENGTH" {
+                        b"-54\n"
                     } else if command.starts_with("F ")
                         || command.starts_with("M ")
                         || command.starts_with("T ")
@@ -200,6 +202,18 @@ async fn operator_reads_and_sets_mode_rejects_unsupported() {
         .await
         .unwrap();
     assert_eq!(bad.status(), StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn observer_reads_smeter() {
+    // TC-RIG-06 (read path): S-meter is readable by an Observer.
+    let rig = spawn_mock_rigctld().await;
+    let app = app_with_rig(vec![user("obs", Role::Observer, "pw")], rig);
+    let token = login(&app, "obs", "pw").await;
+
+    let read = app.oneshot(get("/api/rig/smeter", &token)).await.unwrap();
+    assert_eq!(read.status(), StatusCode::OK);
+    assert_eq!(body_json(read).await["strength"], -54);
 }
 
 #[tokio::test]

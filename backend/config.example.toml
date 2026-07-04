@@ -52,3 +52,17 @@ timeout_ms = 2000
 # PTT safety timeout (seconds): the server auto-unkeys if PTT is left active this
 # long without a refresh (NFR-SEC-07).
 ptt_timeout_secs = 120
+# Circuit breaker (NFR-REL-02): open after this many consecutive failures, then
+# fail fast for the cooldown before retrying.
+breaker_threshold = 3
+breaker_cooldown_ms = 1000
+
+[gpio]
+# Raspberry Pi GPIO control (ARC-08). Disabled by default; enable on Pi targets.
+enabled = false
+# Only listed pins are reachable; every other pin is inaccessible (NFR-SEC-16).
+# Outputs are driven to `safe_state` at startup. direction: in|out, safe_state: low|high.
+# [[gpio.pins]]
+# pin = 17
+# direction = "out"
+# safe_state = "low"

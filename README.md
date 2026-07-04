@@ -7,14 +7,34 @@ authenticated rig control via hamlib/rigctld, a live spectrum + waterfall displa
 **Opus** audio, Raspberry Pi GPIO, and split-host operation over a private network — all under an
 explicit **security-first, documentation-first** release discipline.
 
-> **Status — documentation / RE baseline complete; implementation not yet started.**
+> **Status — RE baseline complete; Phase 1 (Secure Control MVP) in progress.**
 > The requirements-engineering and concept baseline (v0.6 Draft) is in [`docs/`](docs/): vision,
 > stakeholder & system requirements, concept/architecture, test strategy, security, governance,
-> deployment, backlog and roadmap. **No Rust workspace or frontend code exists yet** — the project
-> is at the **Phase 0 → Phase 1** transition. landline is developed **requirements-first and
-> test-driven**, with strict traceability from stakeholder needs down to individual test cases,
-> enforced by a **build-breaking traceability gate** (rules **R1–R5**, see
-> [`docs/README.md`](docs/README.md)).
+> deployment, backlog and roadmap. The **backend walking skeleton has landed** (Cargo workspace
+> under [`backend/`](backend/) + [`xtask/`](xtask/): an Axum/Tokio/Tower server with health/version
+> routes, structured tracing, single-file TOML config, and a verified aarch64 Raspberry Pi
+> cross-build). The current work list is in [`docs/action-list.md`](docs/action-list.md) — next up
+> is authenticated rig control. landline is developed **requirements-first and test-driven**, with
+> strict traceability from stakeholder needs down to individual test cases, enforced by a
+> **build-breaking traceability gate** (rules **R1–R5**, see [`docs/README.md`](docs/README.md)).
+
+## Building
+
+```sh
+# Enable the git hooks once per clone (frontmatter + trace gate, then fmt/clippy/test):
+git config core.hooksPath .githooks
+
+cargo build --workspace          # build backend + xtask
+cargo test  --workspace          # run tests
+cargo xtask ci                   # trace gate + fmt + clippy (pedantic) + tests
+cargo run   -p landline-backend  # serve on 127.0.0.1:8443 (GET /healthz, /version)
+
+# Cross-compile the Raspberry Pi reference target (needs gcc-aarch64-linux-gnu):
+cargo build --release -p landline-backend --target aarch64-unknown-linux-gnu
+```
+
+Configuration is a single TOML file (`~/.config/landline/config.toml`, or `$LANDLINE_CONFIG`);
+see [`backend/config.example.toml`](backend/config.example.toml).
 
 ---
 

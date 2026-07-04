@@ -2,12 +2,12 @@
 # landline pre-commit hook.
 # Enable once per clone with:  git config core.hooksPath .githooks
 #
-# Runs today (docs-only repo):
+# Runs:
 #   1. docs frontmatter check  — every tracked docs/**/*.md must start with a
 #      `---` line and its YAML frontmatter must carry the required keys.
 #   2. python3 scripts/trace-gate.py  — requirement -> test traceability (R3/R4).
-#
-# The Rust steps below are commented out until the Axum/Tokio workspace lands.
+#   3. cargo fmt --check + cargo clippy (pedantic, -D warnings)  — active now
+#      that the Axum/Tokio workspace has landed (A1/A2).
 set -eu
 
 # --- 1. docs frontmatter check -------------------------------------------------
@@ -47,10 +47,16 @@ fi
 echo "[pre-commit] python3 scripts/trace-gate.py"
 python3 scripts/trace-gate.py
 
-# --- Rust workspace steps (enable once the workspace lands) -------------------
-# echo "[pre-commit] cargo fmt --all -- --check"
-# cargo fmt --all -- --check
-# echo "[pre-commit] cargo clippy --all-targets -- -D warnings"
-# cargo clippy --all-targets -- -D warnings
+# --- 3. Rust workspace steps --------------------------------------------------
+# Only run when a Cargo workspace is present (keeps the hook usable for
+# docs-only clones/checkouts before the workspace existed).
+if [ -f Cargo.toml ] && command -v cargo >/dev/null 2>&1; then
+	echo "[pre-commit] cargo fmt --all -- --check"
+	cargo fmt --all -- --check
+	# Workspace lints set clippy::pedantic = warn; -D warnings enforces
+	# NFR-MAINT-01 (pass Clippy pedantic without warnings).
+	echo "[pre-commit] cargo clippy --all-targets -- -D warnings"
+	cargo clippy --all-targets -- -D warnings
+fi
 
 echo "[pre-commit] OK"

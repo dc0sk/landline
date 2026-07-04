@@ -2,21 +2,27 @@
 # landline pre-push hook.
 # Enable once per clone with:  git config core.hooksPath .githooks
 #
-# Runs today (docs-only repo):
-#   python3 scripts/trace-gate.py  — full requirement -> test traceability gate
-#   (R3/R4): fails on any TC naming an unknown requirement, or any uncovered
-#   M/S requirement.
-#
-# The Rust steps below are commented out until the Axum/Tokio workspace lands.
+# Runs:
+#   1. python3 scripts/trace-gate.py  — full requirement -> test traceability
+#      gate (R3/R4): fails on any TC naming an unknown requirement, or any
+#      uncovered M/S requirement.
+#   2. cargo test --workspace, and cargo audit if installed  — active now that
+#      the Axum/Tokio workspace has landed (A1/A2).
 set -eu
 
 echo "[pre-push] python3 scripts/trace-gate.py (R3/R4 gate)"
 python3 scripts/trace-gate.py
 
-# --- Rust workspace steps (enable once the workspace lands) -------------------
-# echo "[pre-push] cargo test --workspace"
-# cargo test --workspace
-# echo "[pre-push] cargo audit"
-# cargo audit
+# --- Rust workspace steps -----------------------------------------------------
+if [ -f Cargo.toml ] && command -v cargo >/dev/null 2>&1; then
+	echo "[pre-push] cargo test --workspace"
+	cargo test --workspace
+	if command -v cargo-audit >/dev/null 2>&1; then
+		echo "[pre-push] cargo audit"
+		cargo audit
+	else
+		echo "[pre-push] cargo audit — SKIPPED (cargo-audit not installed)"
+	fi
+fi
 
 echo "[pre-push] OK"

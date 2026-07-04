@@ -1,7 +1,7 @@
 ---
 title: Product Backlog
 status: Draft
-version: 0.5.2
+version: 0.5.3
 updated: 2026-07-04
 authors:
   - Simon Keimer (DC0SK)
@@ -93,7 +93,7 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 
 | ID | Title | Priority | Phase | Est. | Deps | Req IDs | Test IDs | Status |
 |---|---|---|---|---|---|---|---|---|
-| BL-020 | Initialize Rust workspace: Tokio + Axum + Tower | Must | 1 | S | BL-011 | NFR-MAINT-01 | — | Proposed |
+| BL-020 | Initialize Rust workspace: Tokio + Axum + Tower | Must | 1 | S | BL-011 | NFR-MAINT-01 | — | Done |
 | BL-021 | Implement auth middleware (JWT, expiry, role claims) | Must | 1 | M | BL-020, BL-012 | FR-AUTH-01–FR-AUTH-05, NFR-SEC-01–NFR-SEC-02 | TC-AUTH-01–TC-AUTH-05, TC-SEC-01–TC-SEC-02 | Proposed |
 | BL-022 | Implement rate limiting and frame/size limits | Must | 1 | S | BL-021 | NFR-SEC-04–NFR-SEC-05 | TC-SEC-04–TC-SEC-05 | Proposed |
 | BL-023 | Implement CORS origin policy | Must | 1 | S | BL-021 | NFR-SEC-06 | TC-SEC-06 | Proposed |
@@ -105,7 +105,7 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 | BL-029 | Implement S-meter streaming | Should | 1 | S | BL-025 | FR-RIG-06 | TC-RIG-06 | Proposed |
 | BL-030 | Implement rig access mutex for concurrent clients | Must | 1 | S | BL-025 | FR-RIG-10 | TC-RIG-09 | Proposed |
 | BL-031 | Implement rigctld reconnect/circuit-breaker | Should | 1 | M | BL-025 | NFR-REL-02 | TC-REL-02 | Proposed |
-| BL-032 | Structured tracing/logging integration | Must | 1 | S | BL-020 | NFR-SEC-09, NFR-SEC-12 | TC-SEC-09–TC-SEC-10 | Proposed |
+| BL-032 | Structured tracing/logging integration | Must | 1 | S | BL-020 | NFR-SEC-09, NFR-SEC-12 | TC-SEC-09–TC-SEC-10 | In Progress |
 | BL-033 | Implement Raspberry Pi GPIO control API for at least 5 digital pins | Must | 1 | M | BL-020, BL-021 | FR-GPIO-01, NFR-SEC-16 | TC-GPIO-01, TC-SEC-15 | Proposed |
 
 ---
@@ -169,9 +169,9 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 | ID | Title | Priority | Phase | Est. | Deps | Req IDs | Test IDs | Status |
 |---|---|---|---|---|---|---|---|---|
 | BL-080 | Write systemd service unit (start/stop/restart, resource limits) | Must | 1 | S | BL-020 | NFR-DEPLOY-02 | TC-DEPLOY-03 | Proposed |
-| BL-081 | Configure TOML config file with defaults | Must | 1 | S | BL-020 | NFR-DEPLOY-04 | — | Proposed |
+| BL-081 | Configure TOML config file with defaults | Must | 1 | S | BL-020 | NFR-DEPLOY-04 | — | In Progress |
 | BL-082 | Document rollback procedure for native deployment | Must | 4 | S | BL-080 | NFR-DEPLOY-05 | TC-DEPLOY-06 | Proposed |
-| BL-083 | Cross-compile release binary for aarch64-unknown-linux-gnu | Must | 1 | S | BL-020 | NFR-DEPLOY-01 | TC-DEPLOY-01–TC-DEPLOY-02 | Proposed |
+| BL-083 | Cross-compile release binary for aarch64-unknown-linux-gnu | Must | 1 | S | BL-020 | NFR-DEPLOY-01 | TC-DEPLOY-01–TC-DEPLOY-02 | Done |
 
 ---
 
@@ -240,6 +240,7 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.5.3 | 2026-07-04 | DC0SK | Phase 1 kickoff: BL-020 (workspace) and BL-083 (aarch64 cross-build) → Done; BL-032 (tracing) and BL-081 (config) → In Progress. |
 | 0.5.2 | 2026-07-04 | DC0SK | Phase 0 reconciliation: verified deliverables against repo and moved BL-004–BL-006, BL-010–BL-011, BL-013, BL-120–BL-121 to Done; BL-012 kept Proposed (rotation policy still open, see note). |
 | 0.5.1 | 2026-06-26 | DC0SK | Migrated to area-coded FR/NFR/TC ids and new doc-tree frontmatter. |
 | 0.5.0 | 2026-05-13 | — | Linked GPIO backlog item to security requirement/test (allowlist + safe startup states) |

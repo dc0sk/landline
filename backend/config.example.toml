@@ -10,3 +10,17 @@
 # tunnel interface (WireGuard/Tailscale), not a public 0.0.0.0 bind (NFR-SEC-13).
 bind = "127.0.0.1"
 port = 8443
+
+[auth]
+# Short-lived access tokens (FR-AUTH-02) plus longer-lived refresh (FR-AUTH-03).
+access_ttl_secs = 900     # 15 minutes
+refresh_ttl_secs = 86400  # 24 hours
+
+# User accounts. `password_hash` is an argon2 PHC string — never a plaintext
+# password (NFR-SEC-12). Generate one with:
+#   cargo run -p landline-backend --bin landline-hash -- <password>   # (helper TBD)
+# or via the `landline_backend::auth::hash_password` API. Roles: admin | operator | observer.
+# [[users]]
+# name = "operator"
+# role = "operator"
+# password_hash = "$argon2id$v=19$m=19456,t=2,p=1$c29tZXNhbHQ$<hash>"

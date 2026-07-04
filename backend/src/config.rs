@@ -39,6 +39,9 @@ pub struct RigConfig {
     pub port: u16,
     /// Per-command timeout in milliseconds.
     pub timeout_ms: u64,
+    /// PTT safety timeout in seconds: the server auto-unkeys if PTT is left
+    /// active this long without a refresh (NFR-SEC-07).
+    pub ptt_timeout_secs: u64,
 }
 
 impl Default for RigConfig {
@@ -47,6 +50,7 @@ impl Default for RigConfig {
             host: "127.0.0.1".to_owned(),
             port: 4532,
             timeout_ms: 2000,
+            ptt_timeout_secs: 120,
         }
     }
 }

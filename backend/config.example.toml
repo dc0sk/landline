@@ -49,3 +49,6 @@ host = "127.0.0.1"
 port = 4532
 # Per-command timeout in milliseconds.
 timeout_ms = 2000
+# PTT safety timeout (seconds): the server auto-unkeys if PTT is left active this
+# long without a refresh (NFR-SEC-07).
+ptt_timeout_secs = 120

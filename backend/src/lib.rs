@@ -17,12 +17,14 @@
 pub mod audit;
 pub mod auth;
 pub mod config;
+pub mod control;
 pub mod rig;
 pub mod routes;
 pub mod security;
 pub mod telemetry;
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use axum::{middleware, Extension, Router};
 use tower_http::limit::RequestBodyLimitLayer;
@@ -31,7 +33,7 @@ use tower_http::trace::TraceLayer;
 use crate::audit::AuditLog;
 use crate::auth::Auth;
 use crate::config::Config;
-use crate::rig::RigAdapter;
+use crate::rig::{PttGuard, RigAdapter};
 use crate::security::RateLimiter;
 
 /// Build the top-level Axum application (ARC-01).
@@ -47,11 +49,16 @@ pub fn app(config: &Config) -> Router {
     let auth = Arc::new(Auth::from_config(&config.auth));
     let audit = Arc::new(AuditLog::from_config(&config.audit));
     let rig = Arc::new(RigAdapter::from_config(&config.rig));
+    let ptt = Arc::new(PttGuard::new(
+        Arc::clone(&rig),
+        Duration::from_secs(config.rig.ptt_timeout_secs),
+    ));
     let limiter = Arc::new(RateLimiter::new(config.security.rate_limit_per_sec));
 
     // Rate limiting guards the auth + protected API surface (not liveness).
     let protected = auth::router()
         .merge(audit::router())
+        .merge(control::router())
         .layer(middleware::from_fn_with_state(
             limiter,
             security::rate_limit,
@@ -61,7 +68,8 @@ pub fn app(config: &Config) -> Router {
         .merge(protected)
         .layer(Extension(auth))
         .layer(Extension(audit))
-        .layer(Extension(rig)) // consumed by the rig control handlers (A11+)
+        .layer(Extension(rig))
+        .layer(Extension(ptt))
         .layer(security::cors_layer(&config.security.allowed_origins))
         .layer(RequestBodyLimitLayer::new(config.security.max_body_bytes))
         .layer(TraceLayer::new_for_http())

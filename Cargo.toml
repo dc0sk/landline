@@ -1,0 +1,30 @@
+# landline — Cargo workspace (Phase 1, action A1).
+# Backend service (Axum/Tokio/Tower) plus an `xtask` task runner that promotes
+# the traceability gate and CI steps behind `cargo xtask` (action A2).
+[workspace]
+resolver = "2"
+members = ["backend", "xtask"]
+
+[workspace.package]
+edition = "2021"
+rust-version = "1.94"
+license = "AGPL-3.0-only"
+authors = ["Simon Keimer (DC0SK)"]
+repository = "https://github.com/dc0sk/landline"
+
+# NFR-MAINT-01: the codebase shall pass Clippy (pedantic) without warnings.
+# Members opt in with `[lints] workspace = true`; CI/hooks run clippy with
+# `-D warnings`, promoting these pedantic warnings to hard errors.
+[workspace.lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+
+[workspace.dependencies]
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "signal"] }
+axum = "0.8"
+tower = { version = "0.5", features = ["util"] }
+tower-http = { version = "0.6", features = ["trace"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+thiserror = "2"

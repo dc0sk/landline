@@ -1,0 +1,12 @@
+# landline backend configuration (single-file source, NFR-DEPLOY-04).
+# Copy to ~/.config/landline/config.toml (or point $LANDLINE_CONFIG at it).
+#
+# This file is secret-free by design: token secrets and TLS private keys live in
+# separate 0600 files (NFR-SEC-03), never here and never in logs or URLs
+# (NFR-SEC-12).
+
+[server]
+# Bind address. Default is loopback; expose beyond the host only over a private
+# tunnel interface (WireGuard/Tailscale), not a public 0.0.0.0 bind (NFR-SEC-13).
+bind = "127.0.0.1"
+port = 8443

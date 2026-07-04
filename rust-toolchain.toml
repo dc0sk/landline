@@ -1,0 +1,6 @@
+[toolchain]
+channel = "stable"
+components = ["rustfmt", "clippy"]
+# The aarch64 Raspberry Pi target (NFR-DEPLOY-01) is added explicitly in CI and
+# by developers who cross-compile — see .cargo/config.toml — rather than pinned
+# here, so a plain native `cargo build`/`cargo test` needs no extra std download.

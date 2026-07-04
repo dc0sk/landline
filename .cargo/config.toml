@@ -1,0 +1,13 @@
+# Cross-compilation to the Raspberry Pi reference target (action A3, NFR-DEPLOY-01):
+# aarch64 Raspberry Pi OS (64-bit, Bookworm).
+#
+# Requires the aarch64 GNU cross toolchain and the Rust target on the build host:
+#   sudo apt-get install gcc-aarch64-linux-gnu        # Debian/Ubuntu
+#   rustup target add aarch64-unknown-linux-gnu
+# then:
+#   cargo build --release --target aarch64-unknown-linux-gnu
+#
+# This linker override applies ONLY to the aarch64 target, so a native build on
+# the developer/CI host is unaffected.
+[target.aarch64-unknown-linux-gnu]
+linker = "aarch64-linux-gnu-gcc"

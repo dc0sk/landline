@@ -14,8 +14,8 @@
 //! circuit breaker is action A16).
 
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::sync::Arc;
-use std::time::Duration;
+use std::sync::{Arc, Mutex as StdMutex, PoisonError};
+use std::time::{Duration, Instant};
 
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
@@ -135,21 +135,63 @@ pub enum RigError {
     /// The rigctld exchange timed out.
     #[error("rigctld timeout")]
     Timeout,
+    /// The circuit breaker is open after repeated failures (NFR-REL-02).
+    #[error("rig temporarily unavailable")]
+    Unavailable,
 }
 
 impl IntoResponse for RigError {
     fn into_response(self) -> Response {
-        // Sanitised: client input errors -> 400; rig-side faults -> 502. No
+        // Sanitised: client input errors -> 400; rig-side faults -> 502/503. No
         // internal details are leaked (NFR-SEC-09).
         let (status, body) = match self {
             RigError::OutOfRange | RigError::InvalidMode => {
                 (StatusCode::BAD_REQUEST, "invalid rig command")
             }
+            RigError::Unavailable => (StatusCode::SERVICE_UNAVAILABLE, "rig unavailable"),
             RigError::Connect(_) | RigError::Io(_) | RigError::Protocol(_) | RigError::Timeout => {
                 (StatusCode::BAD_GATEWAY, "rig unavailable")
             }
         };
         (status, body).into_response()
+    }
+}
+
+/// A simple circuit breaker (NFR-REL-02): after `threshold` consecutive
+/// failures it opens for `cooldown`, failing fast so a dead rigctld is not
+/// hammered; a success closes it.
+struct CircuitBreaker {
+    threshold: u32,
+    cooldown: Duration,
+    failures: u32,
+    open_until: Option<Instant>,
+}
+
+impl CircuitBreaker {
+    fn new(threshold: u32, cooldown: Duration) -> Self {
+        Self {
+            threshold,
+            cooldown,
+            failures: 0,
+            open_until: None,
+        }
+    }
+
+    /// Whether a request is allowed at `now` (closed, or cooldown elapsed).
+    fn allow(&self, now: Instant) -> bool {
+        self.open_until.is_none_or(|until| now >= until)
+    }
+
+    fn record_success(&mut self) {
+        self.failures = 0;
+        self.open_until = None;
+    }
+
+    fn record_failure(&mut self, now: Instant) {
+        self.failures += 1;
+        if self.failures >= self.threshold {
+            self.open_until = Some(now + self.cooldown);
+        }
     }
 }
 
@@ -159,6 +201,7 @@ pub struct RigAdapter {
     port: u16,
     timeout: Duration,
     conn: Mutex<Option<BufReader<TcpStream>>>,
+    breaker: StdMutex<CircuitBreaker>,
 }
 
 impl RigAdapter {
@@ -171,6 +214,10 @@ impl RigAdapter {
             port: config.port,
             timeout: Duration::from_millis(config.timeout_ms),
             conn: Mutex::new(None),
+            breaker: StdMutex::new(CircuitBreaker::new(
+                config.breaker_threshold,
+                Duration::from_millis(config.breaker_cooldown_ms),
+            )),
         }
     }
 
@@ -242,6 +289,28 @@ impl RigAdapter {
     /// lines. On any failure the connection is dropped so the next call
     /// reconnects.
     async fn request(&self, command: &str, expected_lines: usize) -> Result<Vec<String>, RigError> {
+        // Fail fast while the breaker is open (NFR-REL-02).
+        if !breaker_lock(&self.breaker).allow(Instant::now()) {
+            return Err(RigError::Unavailable);
+        }
+
+        let result = self.request_inner(command, expected_lines).await;
+
+        // Record the outcome for the breaker.
+        let mut breaker = breaker_lock(&self.breaker);
+        if result.is_ok() {
+            breaker.record_success();
+        } else {
+            breaker.record_failure(Instant::now());
+        }
+        result
+    }
+
+    async fn request_inner(
+        &self,
+        command: &str,
+        expected_lines: usize,
+    ) -> Result<Vec<String>, RigError> {
         let mut guard = self.conn.lock().await;
         if guard.is_none() {
             let stream = timeout(
@@ -263,6 +332,10 @@ impl RigAdapter {
         }
         result
     }
+}
+
+fn breaker_lock(breaker: &StdMutex<CircuitBreaker>) -> std::sync::MutexGuard<'_, CircuitBreaker> {
+    breaker.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
 async fn exchange(
@@ -380,7 +453,29 @@ fn parse_rprt(line: &str) -> Result<(), RigError> {
 
 #[cfg(test)]
 mod tests {
-    use super::{parse_rprt, validate_frequency, Mode, RigError};
+    use super::{parse_rprt, validate_frequency, CircuitBreaker, Mode, RigError};
+    use std::time::{Duration, Instant};
+
+    #[test]
+    fn circuit_breaker_opens_and_recovers() {
+        // NFR-REL-02: after `threshold` failures the breaker opens (fail fast),
+        // then allows a retry once the cooldown elapses; a success closes it.
+        let mut breaker = CircuitBreaker::new(3, Duration::from_millis(500));
+        let now = Instant::now();
+        assert!(breaker.allow(now));
+
+        breaker.record_failure(now);
+        breaker.record_failure(now);
+        assert!(breaker.allow(now), "still closed below threshold");
+        breaker.record_failure(now);
+        assert!(!breaker.allow(now), "open after threshold");
+
+        // Cooldown elapsed -> half-open, a retry is allowed.
+        assert!(breaker.allow(now + Duration::from_millis(500)));
+        // A success closes it again.
+        breaker.record_success();
+        assert!(breaker.allow(now));
+    }
 
     #[test]
     fn frequency_validation_rejects_negative_and_out_of_range() {

@@ -1,7 +1,7 @@
 ---
 title: Action List
 status: Draft
-version: "0.7"
+version: "0.8"
 updated: 2026-07-04
 authors:
   - Simon Keimer (DC0SK)
@@ -35,10 +35,10 @@ License notice: This project is licensed under AGPL-3.0-only. See the top-level 
   rate limiting, body-size limit, CORS allowlist). Transport decision recorded in ADR-08
   (TLS/WSS + JWT; TLS-PSK rejected). The ARC-07 audit log (A9: hash-chained,
   tamper-evident, Admin-viewable) is in place, the ARC-04 rigctld adapter (A10) has landed,
-  and the **rig control endpoints** (A11–A14: frequency, mode, PTT with safety timeout,
-  serialised exclusive access) are live — all RBAC-gated and audited. **Next action: A15 —
-  S-meter streaming** (FR-RIG-06, Observer-readable), then A16 (circuit breaker) and
-  A17 (GPIO).
+  the **rig control endpoints** (A11–A14) are live, and the **Phase 1 backend is complete**
+  (A15 S-meter read, A16 circuit breaker, A17 GPIO). All backend actions A1–A17 are done —
+  authenticated, RBAC-gated, rate-limited, audited, injection-hardened. **Next milestone:
+  the frontend (A18–A26)** — TypeScript control UI, then the Phase 1 exit review (A27).
 - Open Phase 0 remainder: secrets *rotation* policy (BL-012) is deferred to before production
   release — tracked below under Phase 4 preparation.
 
@@ -63,9 +63,9 @@ rigctld adapter → control handlers → GPIO).
 - [x] A12. Implement mode read/set handlers — BL-027 · FR-RIG-03–FR-RIG-04 · TC-RIG-03 — *done: `GET/POST /api/rig/mode` (Operator), unsupported/injection mode → 400 (NFR-SEC-08), set audited*
 - [x] A13. Implement PTT handler with role check and safety timeout — BL-028 · FR-RIG-05, NFR-SEC-07 · TC-RIG-04–TC-RIG-05, TC-SEC-07 — *done: `POST /api/rig/ptt` (Operator); `PttGuard` server-side safety timeout auto-unkeys (NFR-SEC-07/TC-SEC-07); Observer denied → 403 and audited (TC-RIG-05)*
 - [x] A14. Implement rig access mutex for concurrent clients — BL-030 · FR-RIG-10 · TC-RIG-09 — *done in the adapter (A10): all rigctld commands serialise through an async mutex, giving exclusive access across concurrent clients*
-- [ ] A15. Implement S-meter streaming — BL-029 · FR-RIG-06 · TC-RIG-06
-- [ ] A16. Implement rigctld reconnect/circuit-breaker — BL-031 · NFR-REL-02 · TC-REL-02
-- [ ] A17. Implement GPIO control API (≥ 5 digital pins, allowlist, safe startup states, role-gated) — BL-033 · FR-GPIO-01, NFR-SEC-16 · TC-GPIO-01, TC-SEC-15
+- [x] A15. Implement S-meter streaming — BL-029 · FR-RIG-06 · TC-RIG-06 — *read path done: `GET /api/rig/smeter` (Observer+). Continuous streaming at a configured cadence rides the Phase-2 WS telemetry channel (ADR-02)*
+- [x] A16. Implement rigctld reconnect/circuit-breaker — BL-031 · NFR-REL-02 · TC-REL-02 — *done: adapter reconnects on failure + `CircuitBreaker` (opens after N failures, fail-fast, half-open after cooldown → 503); unit-tested. TC-REL-02 kill/restart is a System test needing real rigctld*
+- [x] A17. Implement GPIO control API (≥ 5 digital pins, allowlist, safe startup states, role-gated) — BL-033 · FR-GPIO-01, NFR-SEC-16 · TC-GPIO-01, TC-SEC-15 — *done: ARC-08 `gpio` module — pin allowlist, safe startup states (NFR-SEC-16), Operator-gated `GET/POST /api/gpio/{pin}`, audited, in-memory backend. Non-allowlisted → 403, input pins not drivable. Tested (TC-SEC-15). Real Pi sysfs/gpiod backend is a deploy-time adapter; TC-GPIO-01 is a hardware System test*
 
 ## 3. Milestone: Phase 1 — frontend and deployment
 
@@ -119,6 +119,7 @@ updated). In addition:
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.8 | 2026-07-04 | DC0SK | Marked A15–A17 done: S-meter read endpoint, rig circuit breaker (NFR-REL-02), GPIO control with allowlist + safe states (ARC-08). Phase 1 backend complete; next milestone the frontend (A18+). |
 | 0.7 | 2026-07-04 | DC0SK | Marked A11–A14 done: rig control endpoints (frequency, mode, PTT + safety timeout, serialised exclusive access), RBAC-gated + audited; completes TC-AUDIT-01. Next action A15 (S-meter). |
 | 0.6 | 2026-07-04 | DC0SK | Marked A10 done: ARC-04 rigctld TCP adapter (typed, validated, injection-proof) + mock-rigctld tests. Next action A11 (frequency handlers). |
 | 0.5 | 2026-07-04 | DC0SK | Marked A9 done: ARC-07 tamper-evident audit log (hash chain, auth-failure logging, Admin view). Next action A10 (rigctld adapter). |

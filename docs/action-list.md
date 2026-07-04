@@ -1,7 +1,7 @@
 ---
 title: Action List
 status: Draft
-version: "0.3"
+version: "0.4"
 updated: 2026-07-04
 authors:
   - Simon Keimer (DC0SK)
@@ -31,9 +31,10 @@ License notice: This project is licensed under AGPL-3.0-only. See the top-level 
   RBAC (A6)** have landed: Cargo workspace (`backend` + `xtask`), Axum/Tokio/Tower server,
   structured tracing, single-file TOML config, activated CI + git hooks, verified aarch64
   cross-build, and the ARC-02 auth module (HS256 JWT + argon2 login + refresh rotation +
-  logout revocation + RBAC extractor). Transport decision recorded in ADR-08 (TLS/WSS + JWT;
-  TLS-PSK rejected). **Next action: A7 — security middleware** (rate limiting + request/WS
-  frame size limits, NFR-SEC-04/05).
+  logout revocation + RBAC extractor) and the ARC-03 security middleware (A7/A8: per-client
+  rate limiting, body-size limit, CORS allowlist). Transport decision recorded in ADR-08
+  (TLS/WSS + JWT; TLS-PSK rejected). **Next action: A9 — audit log subsystem**
+  (append-only, state-changing actions + auth failures, FR-AUDIT-01–04).
 - Open Phase 0 remainder: secrets *rotation* policy (BL-012) is deferred to before production
   release — tracked below under Phase 4 preparation.
 
@@ -50,8 +51,8 @@ rigctld adapter → control handlers → GPIO).
 - [x] A4. Implement structured tracing/logging integration (no secrets in logs) — BL-032 · NFR-SEC-09, NFR-SEC-12 · TC-SEC-09–TC-SEC-10 — *skeleton done: `telemetry::init` (env-filter, no credential emission); error-response sanitisation (NFR-SEC-09) lands with the security middleware (A7)*
 - [x] A5. Implement TOML config loader with secure defaults and 0600 permission checks — BL-081 · NFR-DEPLOY-04 — *loader done: single-file TOML, loopback-default bind (NFR-SEC-13), `$LANDLINE_CONFIG` override; 0600 permission enforcement (NFR-SEC-03) still to add*
 - [x] A6. Implement auth middleware (JWT issue/verify, expiry, role claims, RBAC) — BL-021 · FR-AUTH-01–FR-AUTH-05, NFR-SEC-02 · TC-AUTH-01–TC-AUTH-05 — *done: ARC-02 `auth` module — HS256 JWT (pure-Rust hmac/sha2, per ADR-08), argon2 login, short-lived access + rotating refresh, logout revocation, `AuthUser` extractor + RBAC (`require`); 11 unit + 6 HTTP tests. NFR-SEC-01 (TLS/WSS) is reverse-proxy/Phase 4 (TC-SEC-01); TC-SEC-02 entropy covered by unit test*
-- [ ] A7. Implement rate limiting and request/WS-frame size limits — BL-022 · NFR-SEC-04–NFR-SEC-05 · TC-SEC-04–TC-SEC-05
-- [ ] A8. Implement CORS origin allowlist policy — BL-023 · NFR-SEC-06 · TC-SEC-06
+- [x] A7. Implement rate limiting and request/WS-frame size limits — BL-022 · NFR-SEC-04–NFR-SEC-05 · TC-SEC-04–TC-SEC-05 — *done: ARC-03 `security` module — per-client token-bucket rate limiter (default 10/s, keyed on peer IP) + `RequestBodyLimitLayer` (default 64 KiB). WS-frame size cap (TC-SEC-05) lands with the WS endpoints (Phase 2/3); reverse-proxy X-Forwarded-For keying is a Phase-4 follow-up*
+- [x] A8. Implement CORS origin allowlist policy — BL-023 · NFR-SEC-06 · TC-SEC-06 — *done: `security::cors_layer` from configured `allowed_origins` (empty = deny all cross-origin); GET/POST + Authorization/Content-Type headers*
 - [ ] A9. Implement audit log subsystem (append-only, state-changing actions + auth failures) — BL-024 · FR-AUDIT-01–FR-AUDIT-04 · TC-AUDIT-01–TC-AUDIT-02
 - [ ] A10. Implement rigctld TCP adapter with command allowlist/sanitisation — BL-025 · FR-RIG-08–FR-RIG-09 · TC-RIG-07–TC-RIG-08
 - [ ] A11. Implement frequency read/set handlers — BL-026 · FR-RIG-01–FR-RIG-02 · TC-RIG-01–TC-RIG-02
@@ -114,6 +115,7 @@ updated). In addition:
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.4 | 2026-07-04 | DC0SK | Marked A7/A8 done: ARC-03 security middleware (rate limiting, body-size limit, CORS allowlist). Next action A9 (audit log). |
 | 0.3 | 2026-07-04 | DC0SK | Marked A6 done: ARC-02 auth & RBAC (JWT + argon2 + refresh + logout). Recorded ADR-08 (TLS-PSK rejected). Next action A7 (security middleware). |
 | 0.2 | 2026-07-04 | DC0SK | Marked A1–A5 done: backend walking skeleton (workspace, server, tracing, config), activated CI/hooks, `cargo xtask`, verified aarch64 cross-build. Next action A6 (auth). |
 | 0.1 | 2026-07-04 | DC0SK | Initial action list: Phase 1 kickoff ordering plus forward-looking Phase 2–4 milestones. |

@@ -24,3 +24,13 @@ refresh_ttl_secs = 86400  # 24 hours
 # name = "operator"
 # role = "operator"
 # password_hash = "$argon2id$v=19$m=19456,t=2,p=1$c29tZXNhbHQ$<hash>"
+
+[security]
+# Per-client rate limit on control endpoints, commands/second (NFR-SEC-04).
+rate_limit_per_sec = 10
+# Maximum accepted request body size in bytes (NFR-SEC-05).
+max_body_bytes = 65536
+# CORS origin allowlist (NFR-SEC-06). Empty = no cross-origin requests allowed.
+# Set to the exact frontend origin(s), e.g.:
+# allowed_origins = ["https://landline.example"]
+allowed_origins = []

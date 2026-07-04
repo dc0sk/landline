@@ -1,7 +1,7 @@
 ---
 title: Product Backlog
 status: Draft
-version: 0.5.3
+version: 0.5.4
 updated: 2026-07-04
 authors:
   - Simon Keimer (DC0SK)
@@ -94,7 +94,7 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 | ID | Title | Priority | Phase | Est. | Deps | Req IDs | Test IDs | Status |
 |---|---|---|---|---|---|---|---|---|
 | BL-020 | Initialize Rust workspace: Tokio + Axum + Tower | Must | 1 | S | BL-011 | NFR-MAINT-01 | — | Done |
-| BL-021 | Implement auth middleware (JWT, expiry, role claims) | Must | 1 | M | BL-020, BL-012 | FR-AUTH-01–FR-AUTH-05, NFR-SEC-01–NFR-SEC-02 | TC-AUTH-01–TC-AUTH-05, TC-SEC-01–TC-SEC-02 | Proposed |
+| BL-021 | Implement auth middleware (JWT, expiry, role claims) | Must | 1 | M | BL-020, BL-012 | FR-AUTH-01–FR-AUTH-05, NFR-SEC-01–NFR-SEC-02 | TC-AUTH-01–TC-AUTH-05, TC-SEC-01–TC-SEC-02 | In Progress |
 | BL-022 | Implement rate limiting and frame/size limits | Must | 1 | S | BL-021 | NFR-SEC-04–NFR-SEC-05 | TC-SEC-04–TC-SEC-05 | Proposed |
 | BL-023 | Implement CORS origin policy | Must | 1 | S | BL-021 | NFR-SEC-06 | TC-SEC-06 | Proposed |
 | BL-024 | Implement audit log subsystem | Must | 1 | M | BL-020 | FR-AUDIT-01–FR-AUDIT-04 | TC-AUDIT-01–TC-AUDIT-02 | Proposed |
@@ -240,6 +240,7 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.5.4 | 2026-07-04 | DC0SK | BL-021 (auth middleware) → In Progress: ARC-02 auth/RBAC implemented (JWT + argon2 + refresh + logout); NFR-SEC-01/TC-SEC-01 (TLS transport) remain for Phase 4. |
 | 0.5.3 | 2026-07-04 | DC0SK | Phase 1 kickoff: BL-020 (workspace) and BL-083 (aarch64 cross-build) → Done; BL-032 (tracing) and BL-081 (config) → In Progress. |
 | 0.5.2 | 2026-07-04 | DC0SK | Phase 0 reconciliation: verified deliverables against repo and moved BL-004–BL-006, BL-010–BL-011, BL-013, BL-120–BL-121 to Done; BL-012 kept Proposed (rotation policy still open, see note). |
 | 0.5.1 | 2026-06-26 | DC0SK | Migrated to area-coded FR/NFR/TC ids and new doc-tree frontmatter. |

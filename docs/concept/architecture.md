@@ -1,8 +1,8 @@
 ---
 title: "landline — Concept & Architecture"
 status: Draft
-version: "0.6"
-updated: 2026-06-26
+version: "0.7"
+updated: 2026-07-04
 authors:
   - Simon Keimer (DC0SK)
 owns: [ARC, ADR]
@@ -171,6 +171,25 @@ attribute model (`Proposed` · `Accepted` · `Superseded`).
 - **Consequences:** Network-use source obligations apply; satisfies `NFR-LIC-01/02`. Downstream
   packagers (SH-7) inherit AGPL terms; the release checklist includes a licence-compliance gate.
 
+### ADR-08 — Transport security: certificate TLS/WSS + app-layer JWT (reject TLS-PSK)
+
+- **Context:** TLS-PSK (pre-shared-key TLS, e.g. as used by native transceiver-remote clients) was
+  considered as a transport-security and mutual-authentication mechanism. It is attractive where a
+  small, known set of clients connect and certificate/PKI management is unwelcome.
+- **Decision:** Use **certificate-based TLS/WSS** for the browser ↔ backend link (terminated at the
+  reverse proxy, ADR-06/`NFR-SEC-01`) together with **app-layer JWT + RBAC** (ARC-02) for
+  authentication and authorisation. **TLS-PSK is rejected.**
+- **Status:** Accepted.
+- **Consequences:** The decisive constraint is ADR-01: landline's frontend is **browser-native**,
+  and browsers do not expose external-PSK TLS to web origins — so TLS-PSK cannot secure the primary
+  browser transport at all (a native client could, but that would overturn ADR-01 and `NFR-COMPAT-*`).
+  The "PSK-style mutual authentication over an untrusted network" property is still needed for
+  split-host and is already provided at the network layer by **WireGuard/Tailscale** (ADR-05,
+  `NFR-SEC-14`), which subsumes what TLS-PSK would offer there. Authentication therefore lives at the
+  app layer (short-lived JWT + refresh, ADR-04). A secondary consequence: the JWT is HS256 signed with
+  pure-Rust primitives (`hmac`/`sha2`), avoiding a `ring`/C dependency so the aarch64 cross-build
+  stays toolchain-free (`NFR-DEPLOY-01`).
+
 > **R5 note:** rule R5 (every implemented `FR` is realised by ≥ 1 named `ARC` element) is enforced
 > once the Rust/TypeScript workspace lands and the trace gate is promoted into `cargo xtask`. Until
 > code exists, the `FR/NFR → ARC` mapping in §2 is the design-time contract that R5 will check.
@@ -179,4 +198,5 @@ attribute model (`Proposed` · `Accepted` · `Superseded`).
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.7 | 2026-07-04 | DC0SK | Added ADR-08 (certificate TLS/WSS + app-layer JWT; TLS-PSK rejected on browser-incompatibility grounds, WireGuard covers split-host mutual auth). |
 | 0.6 | 2026-06-26 | DC0SK | Initial concept/architecture baseline: ARC-01..ARC-13 component model, data-flow & trust boundaries, ADR-01..ADR-07, and the R5 design-time mapping. |

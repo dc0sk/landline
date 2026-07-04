@@ -1,7 +1,7 @@
 ---
 title: Action List
 status: Draft
-version: "0.2"
+version: "0.3"
 updated: 2026-07-04
 authors:
   - Simon Keimer (DC0SK)
@@ -27,11 +27,13 @@ License notice: This project is licensed under AGPL-3.0-only. See the top-level 
 - **Trace gate: green** — 78 requirements declared, all 76 Must/Should covered by tests
   (`python3 scripts/trace-gate.py`). FR-RIG-07 and FR-SPEC-04 are Could-priority and
   intentionally uncovered per rule R3.
-- **Phase 1 — Secure Control MVP: in progress.** Backend walking skeleton has landed
-  (A1–A5): Cargo workspace (`backend` + `xtask`), Axum/Tokio/Tower server with health/version
-  routes and graceful shutdown, structured tracing, single-file TOML config, activated
-  CI + git hooks, and a verified aarch64 cross-build. **Next action: A6 — auth middleware**
-  (JWT issue/verify, RBAC), the first security-critical feature.
+- **Phase 1 — Secure Control MVP: in progress.** Backend skeleton (A1–A5) plus **auth &
+  RBAC (A6)** have landed: Cargo workspace (`backend` + `xtask`), Axum/Tokio/Tower server,
+  structured tracing, single-file TOML config, activated CI + git hooks, verified aarch64
+  cross-build, and the ARC-02 auth module (HS256 JWT + argon2 login + refresh rotation +
+  logout revocation + RBAC extractor). Transport decision recorded in ADR-08 (TLS/WSS + JWT;
+  TLS-PSK rejected). **Next action: A7 — security middleware** (rate limiting + request/WS
+  frame size limits, NFR-SEC-04/05).
 - Open Phase 0 remainder: secrets *rotation* policy (BL-012) is deferred to before production
   release — tracked below under Phase 4 preparation.
 
@@ -47,7 +49,7 @@ rigctld adapter → control handlers → GPIO).
 - [x] A3. Set up cross-compilation for `aarch64-unknown-linux-gnu` in CI from day one — BL-083 · NFR-DEPLOY-01 · TC-DEPLOY-01–TC-DEPLOY-02 — *done: `.cargo/config.toml` linker override + CI cross-build step; verified locally (aarch64 ELF produced)*
 - [x] A4. Implement structured tracing/logging integration (no secrets in logs) — BL-032 · NFR-SEC-09, NFR-SEC-12 · TC-SEC-09–TC-SEC-10 — *skeleton done: `telemetry::init` (env-filter, no credential emission); error-response sanitisation (NFR-SEC-09) lands with the security middleware (A7)*
 - [x] A5. Implement TOML config loader with secure defaults and 0600 permission checks — BL-081 · NFR-DEPLOY-04 — *loader done: single-file TOML, loopback-default bind (NFR-SEC-13), `$LANDLINE_CONFIG` override; 0600 permission enforcement (NFR-SEC-03) still to add*
-- [ ] A6. Implement auth middleware (JWT issue/verify, expiry, role claims, RBAC) — BL-021 · FR-AUTH-01–FR-AUTH-05, NFR-SEC-01–NFR-SEC-02 · TC-AUTH-01–TC-AUTH-05, TC-SEC-01–TC-SEC-02
+- [x] A6. Implement auth middleware (JWT issue/verify, expiry, role claims, RBAC) — BL-021 · FR-AUTH-01–FR-AUTH-05, NFR-SEC-02 · TC-AUTH-01–TC-AUTH-05 — *done: ARC-02 `auth` module — HS256 JWT (pure-Rust hmac/sha2, per ADR-08), argon2 login, short-lived access + rotating refresh, logout revocation, `AuthUser` extractor + RBAC (`require`); 11 unit + 6 HTTP tests. NFR-SEC-01 (TLS/WSS) is reverse-proxy/Phase 4 (TC-SEC-01); TC-SEC-02 entropy covered by unit test*
 - [ ] A7. Implement rate limiting and request/WS-frame size limits — BL-022 · NFR-SEC-04–NFR-SEC-05 · TC-SEC-04–TC-SEC-05
 - [ ] A8. Implement CORS origin allowlist policy — BL-023 · NFR-SEC-06 · TC-SEC-06
 - [ ] A9. Implement audit log subsystem (append-only, state-changing actions + auth failures) — BL-024 · FR-AUDIT-01–FR-AUDIT-04 · TC-AUDIT-01–TC-AUDIT-02
@@ -112,5 +114,6 @@ updated). In addition:
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.3 | 2026-07-04 | DC0SK | Marked A6 done: ARC-02 auth & RBAC (JWT + argon2 + refresh + logout). Recorded ADR-08 (TLS-PSK rejected). Next action A7 (security middleware). |
 | 0.2 | 2026-07-04 | DC0SK | Marked A1–A5 done: backend walking skeleton (workspace, server, tracing, config), activated CI/hooks, `cargo xtask`, verified aarch64 cross-build. Next action A6 (auth). |
 | 0.1 | 2026-07-04 | DC0SK | Initial action list: Phase 1 kickoff ordering plus forward-looking Phase 2–4 milestones. |

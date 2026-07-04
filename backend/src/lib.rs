@@ -7,16 +7,17 @@
 //! - [`routes`] + [`app`] — ARC-01 (Axum HTTP/WS server + Tower middleware)
 //! - [`auth`] — ARC-02 (authentication, session, RBAC)
 //! - [`security`] — ARC-03 (rate limiting, body-size limit, CORS)
+//! - [`rig`] — ARC-04 (hamlib/rigctld adapter + command validation)
 //! - [`audit`] — ARC-07 (tamper-evident audit log)
 //! - [`config`] — ARC-09 (single-file TOML config loader)
 //! - [`telemetry`] — ARC-01 Tracing initialisation
 //!
-//! Feature components (ARC-04 rig adapter, ARC-08 GPIO) land in subsequent
-//! Phase 1 actions.
+//! Feature components (ARC-08 GPIO) land in subsequent Phase 1 actions.
 
 pub mod audit;
 pub mod auth;
 pub mod config;
+pub mod rig;
 pub mod routes;
 pub mod security;
 pub mod telemetry;
@@ -30,6 +31,7 @@ use tower_http::trace::TraceLayer;
 use crate::audit::AuditLog;
 use crate::auth::Auth;
 use crate::config::Config;
+use crate::rig::RigAdapter;
 use crate::security::RateLimiter;
 
 /// Build the top-level Axum application (ARC-01).
@@ -44,6 +46,7 @@ use crate::security::RateLimiter;
 pub fn app(config: &Config) -> Router {
     let auth = Arc::new(Auth::from_config(&config.auth));
     let audit = Arc::new(AuditLog::from_config(&config.audit));
+    let rig = Arc::new(RigAdapter::from_config(&config.rig));
     let limiter = Arc::new(RateLimiter::new(config.security.rate_limit_per_sec));
 
     // Rate limiting guards the auth + protected API surface (not liveness).
@@ -58,6 +61,7 @@ pub fn app(config: &Config) -> Router {
         .merge(protected)
         .layer(Extension(auth))
         .layer(Extension(audit))
+        .layer(Extension(rig)) // consumed by the rig control handlers (A11+)
         .layer(security::cors_layer(&config.security.allowed_origins))
         .layer(RequestBodyLimitLayer::new(config.security.max_body_bytes))
         .layer(TraceLayer::new_for_http())

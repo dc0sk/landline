@@ -19,7 +19,7 @@ repository = "https://github.com/dc0sk/landline"
 pedantic = { level = "warn", priority = -1 }
 
 [workspace.dependencies]
-tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "signal"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "signal", "time", "io-util", "sync"] }
 axum = "0.8"
 tower = { version = "0.5", features = ["util"] }
 tower-http = { version = "0.6", features = ["trace", "limit", "cors"] }

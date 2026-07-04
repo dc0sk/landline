@@ -1,7 +1,7 @@
 ---
 title: Action List
 status: Draft
-version: "0.5"
+version: "0.6"
 updated: 2026-07-04
 authors:
   - Simon Keimer (DC0SK)
@@ -34,9 +34,10 @@ License notice: This project is licensed under AGPL-3.0-only. See the top-level 
   logout revocation + RBAC extractor) and the ARC-03 security middleware (A7/A8: per-client
   rate limiting, body-size limit, CORS allowlist). Transport decision recorded in ADR-08
   (TLS/WSS + JWT; TLS-PSK rejected). The ARC-07 audit log (A9: hash-chained,
-  tamper-evident, Admin-viewable) is in place. **Next action: A10 — rigctld TCP adapter**
-  (command allowlist + validation, the ARC-04 rig interface), which begins the actual
-  rig-control feature work.
+  tamper-evident, Admin-viewable) is in place, and the ARC-04 rigctld adapter (A10:
+  typed, validated, injection-proof) has landed. **Next action: A11 — frequency
+  read/set HTTP handlers** (FR-RIG-01/02), the first rig-control endpoints, RBAC-gated
+  and audited.
 - Open Phase 0 remainder: secrets *rotation* policy (BL-012) is deferred to before production
   release — tracked below under Phase 4 preparation.
 
@@ -56,7 +57,7 @@ rigctld adapter → control handlers → GPIO).
 - [x] A7. Implement rate limiting and request/WS-frame size limits — BL-022 · NFR-SEC-04–NFR-SEC-05 · TC-SEC-04–TC-SEC-05 — *done: ARC-03 `security` module — per-client token-bucket rate limiter (default 10/s, keyed on peer IP) + `RequestBodyLimitLayer` (default 64 KiB). WS-frame size cap (TC-SEC-05) lands with the WS endpoints (Phase 2/3); reverse-proxy X-Forwarded-For keying is a Phase-4 follow-up*
 - [x] A8. Implement CORS origin allowlist policy — BL-023 · NFR-SEC-06 · TC-SEC-06 — *done: `security::cors_layer` from configured `allowed_origins` (empty = deny all cross-origin); GET/POST + Authorization/Content-Type headers*
 - [x] A9. Implement audit log subsystem (append-only, state-changing actions + auth failures) — BL-024 · FR-AUDIT-01–FR-AUDIT-04 · TC-AUDIT-01–TC-AUDIT-02 — *done: ARC-07 `audit` module — SHA-256 hash-chained tamper-evident events (`verify_chain`), timestamp/IP/user/action/params (FR-AUDIT-02), durable append file, Admin-only `GET /api/audit`. Auth failures logged with IP, no password (FR-AUDIT-04/NFR-SEC-12). TC-AUDIT-01 (rig-action entry) completes when rig handlers call `record_action` (A13+); FR-AUDIT-03 retention is deployment log-rotation*
-- [ ] A10. Implement rigctld TCP adapter with command allowlist/sanitisation — BL-025 · FR-RIG-08–FR-RIG-09 · TC-RIG-07–TC-RIG-08
+- [x] A10. Implement rigctld TCP adapter with command allowlist/sanitisation — BL-025 · FR-RIG-08–FR-RIG-09 · TC-RIG-07–TC-RIG-08 — *done: ARC-04 `rig` module — typed async hamlib/rigctld TCP client (freq/mode/PTT/S-meter), allowlisted `Mode` enum + numeric range validation (FR-RIG-09/NFR-SEC-08, injection-proof by construction), async-mutex-serialised access (FR-RIG-10), reconnect-on-failure. Tested against a mock rigctld (TC-RIG-07) + validation units (TC-RIG-08/TC-SEC-08). HTTP 400/502 mapping ready for the A11+ handlers*
 - [ ] A11. Implement frequency read/set handlers — BL-026 · FR-RIG-01–FR-RIG-02 · TC-RIG-01–TC-RIG-02
 - [ ] A12. Implement mode read/set handlers — BL-027 · FR-RIG-03–FR-RIG-04 · TC-RIG-03
 - [ ] A13. Implement PTT handler with role check and safety timeout — BL-028 · FR-RIG-05, NFR-SEC-07 · TC-RIG-04–TC-RIG-05, TC-SEC-07
@@ -117,6 +118,7 @@ updated). In addition:
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.6 | 2026-07-04 | DC0SK | Marked A10 done: ARC-04 rigctld TCP adapter (typed, validated, injection-proof) + mock-rigctld tests. Next action A11 (frequency handlers). |
 | 0.5 | 2026-07-04 | DC0SK | Marked A9 done: ARC-07 tamper-evident audit log (hash chain, auth-failure logging, Admin view). Next action A10 (rigctld adapter). |
 | 0.4 | 2026-07-04 | DC0SK | Marked A7/A8 done: ARC-03 security middleware (rate limiting, body-size limit, CORS allowlist). Next action A9 (audit log). |
 | 0.3 | 2026-07-04 | DC0SK | Marked A6 done: ARC-02 auth & RBAC (JWT + argon2 + refresh + logout). Recorded ADR-08 (TLS-PSK rejected). Next action A7 (security middleware). |

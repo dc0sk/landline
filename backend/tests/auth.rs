@@ -7,22 +7,18 @@ use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use landline_backend::app;
 use landline_backend::auth::{hash_password, Role};
-use landline_backend::config::{
-    AuditConfig, AuthConfig, Config, SecurityConfig, ServerConfig, UserConfig,
-};
+use landline_backend::config::{AuthConfig, Config, UserConfig};
 use serde_json::{json, Value};
 use tower::ServiceExt;
 
 fn config_with(users: Vec<UserConfig>) -> Config {
     Config {
-        server: ServerConfig::default(),
         auth: AuthConfig {
             access_ttl_secs: 900,
             refresh_ttl_secs: 3600,
             users,
         },
-        security: SecurityConfig::default(),
-        audit: AuditConfig::default(),
+        ..Config::default()
     }
 }
 

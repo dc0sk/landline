@@ -1,7 +1,7 @@
 ---
 title: Product Backlog
 status: Draft
-version: 0.5.6
+version: 0.5.7
 updated: 2026-07-04
 authors:
   - Simon Keimer (DC0SK)
@@ -98,7 +98,7 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 | BL-022 | Implement rate limiting and frame/size limits | Must | 1 | S | BL-021 | NFR-SEC-04–NFR-SEC-05 | TC-SEC-04–TC-SEC-05 | In Progress |
 | BL-023 | Implement CORS origin policy | Must | 1 | S | BL-021 | NFR-SEC-06 | TC-SEC-06 | Done |
 | BL-024 | Implement audit log subsystem | Must | 1 | M | BL-020 | FR-AUDIT-01–FR-AUDIT-04 | TC-AUDIT-01–TC-AUDIT-02 | In Progress |
-| BL-025 | Implement rigctld TCP adapter with command sanitisation | Must | 1 | M | BL-020 | FR-RIG-08–FR-RIG-09 | TC-RIG-07–TC-RIG-08 | Proposed |
+| BL-025 | Implement rigctld TCP adapter with command sanitisation | Must | 1 | M | BL-020 | FR-RIG-08–FR-RIG-09 | TC-RIG-07–TC-RIG-08 | Done |
 | BL-026 | Implement frequency read/set handlers | Must | 1 | S | BL-025, BL-021 | FR-RIG-01–FR-RIG-02 | TC-RIG-01–TC-RIG-02 | Proposed |
 | BL-027 | Implement mode read/set handlers | Must | 1 | S | BL-025, BL-021 | FR-RIG-03–FR-RIG-04 | TC-RIG-03 | Proposed |
 | BL-028 | Implement PTT handler with role check and safety timeout | Must | 1 | M | BL-025, BL-021 | FR-RIG-05, NFR-SEC-07 | TC-RIG-04–TC-RIG-05, TC-SEC-07 | Proposed |
@@ -244,6 +244,7 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.5.7 | 2026-07-04 | DC0SK | BL-025 (rigctld adapter) → Done: ARC-04 typed async rigctld client with allowlist + range validation (injection-proof), serialised access, reconnect; mock-rigctld + validation tests. |
 | 0.5.6 | 2026-07-04 | DC0SK | BL-024 (audit log) → In Progress: ARC-07 hash-chained tamper-evident audit subsystem + auth-failure logging + Admin view; rig-action auditing lands with rig handlers. |
 | 0.5.5 | 2026-07-04 | DC0SK | BL-023 (CORS) → Done; BL-022 (rate/size limits) → In Progress (rate limiting + HTTP body limit done; WS frame cap deferred to WS endpoints). ARC-03 security middleware. |
 | 0.5.4 | 2026-07-04 | DC0SK | BL-021 (auth middleware) → In Progress: ARC-02 auth/RBAC implemented (JWT + argon2 + refresh + logout); NFR-SEC-01/TC-SEC-01 (TLS transport) remain for Phase 4. |

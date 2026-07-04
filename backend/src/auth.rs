@@ -40,6 +40,7 @@ use hmac::{Hmac, Mac};
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 
+use crate::audit::{AuditLog, ClientIp};
 use crate::config::AuthConfig;
 
 type HmacSha256 = Hmac<Sha256>;
@@ -398,11 +399,21 @@ impl From<TokenPair> for TokenResponse {
 
 async fn login(
     Extension(auth): Extension<Arc<Auth>>,
+    Extension(audit): Extension<Arc<AuditLog>>,
+    ClientIp(ip): ClientIp,
     Json(req): Json<LoginRequest>,
 ) -> Result<Json<TokenResponse>, AuthError> {
-    // NFR-SEC-12: never log the password; log only the outcome.
-    let pair = auth.login(&req.name, &req.password)?;
-    Ok(Json(pair.into()))
+    // NFR-SEC-12: never log the password; audit records only IP, user, outcome.
+    match auth.login(&req.name, &req.password) {
+        Ok(pair) => {
+            audit.record_login(ip.as_deref(), &req.name);
+            Ok(Json(pair.into()))
+        }
+        Err(err) => {
+            audit.record_auth_failure(ip.as_deref(), &req.name); // FR-AUDIT-04
+            Err(err)
+        }
+    }
 }
 
 async fn refresh(

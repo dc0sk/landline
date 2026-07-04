@@ -7,12 +7,14 @@
 //! - [`routes`] + [`app`] — ARC-01 (Axum HTTP/WS server + Tower middleware)
 //! - [`auth`] — ARC-02 (authentication, session, RBAC)
 //! - [`security`] — ARC-03 (rate limiting, body-size limit, CORS)
+//! - [`audit`] — ARC-07 (tamper-evident audit log)
 //! - [`config`] — ARC-09 (single-file TOML config loader)
 //! - [`telemetry`] — ARC-01 Tracing initialisation
 //!
-//! Feature components (ARC-04 rig adapter, ARC-07 audit, ARC-08 GPIO) land in
-//! subsequent Phase 1 actions.
+//! Feature components (ARC-04 rig adapter, ARC-08 GPIO) land in subsequent
+//! Phase 1 actions.
 
+pub mod audit;
 pub mod auth;
 pub mod config;
 pub mod routes;
@@ -25,6 +27,7 @@ use axum::{middleware, Extension, Router};
 use tower_http::limit::RequestBodyLimitLayer;
 use tower_http::trace::TraceLayer;
 
+use crate::audit::AuditLog;
 use crate::auth::Auth;
 use crate::config::Config;
 use crate::security::RateLimiter;
@@ -40,17 +43,21 @@ use crate::security::RateLimiter;
 /// rate limiter can key on the peer IP.
 pub fn app(config: &Config) -> Router {
     let auth = Arc::new(Auth::from_config(&config.auth));
+    let audit = Arc::new(AuditLog::from_config(&config.audit));
     let limiter = Arc::new(RateLimiter::new(config.security.rate_limit_per_sec));
 
     // Rate limiting guards the auth + protected API surface (not liveness).
-    let protected = auth::router().layer(middleware::from_fn_with_state(
-        limiter,
-        security::rate_limit,
-    ));
+    let protected = auth::router()
+        .merge(audit::router())
+        .layer(middleware::from_fn_with_state(
+            limiter,
+            security::rate_limit,
+        ));
 
     routes::router()
         .merge(protected)
         .layer(Extension(auth))
+        .layer(Extension(audit))
         .layer(security::cors_layer(&config.security.allowed_origins))
         .layer(RequestBodyLimitLayer::new(config.security.max_body_bytes))
         .layer(TraceLayer::new_for_http())

@@ -34,3 +34,10 @@ max_body_bytes = 65536
 # Set to the exact frontend origin(s), e.g.:
 # allowed_origins = ["https://landline.example"]
 allowed_origins = []
+
+[audit]
+# Durable append-only audit log (ARC-07). Unset = in-memory only (dev). The
+# file is written append-only; 30-day retention (FR-AUDIT-03) is enforced by
+# deployment log rotation (logrotate/systemd).
+# path = "/var/lib/landline/audit.log"
+retention_days = 30

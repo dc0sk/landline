@@ -23,6 +23,29 @@ pub struct Config {
     pub auth: AuthConfig,
     /// Security middleware settings (ARC-03).
     pub security: SecurityConfig,
+    /// Audit log settings (ARC-07).
+    pub audit: AuditConfig,
+}
+
+/// Audit log configuration (ARC-07).
+#[derive(Debug, Clone, Deserialize)]
+#[serde(default)]
+pub struct AuditConfig {
+    /// Append-only audit log file path. `None` keeps the log in memory only
+    /// (development); production should set a durable path.
+    pub path: Option<String>,
+    /// Minimum retention in days (FR-AUDIT-03). Enforced by deployment log
+    /// rotation (logrotate/systemd); the app writes append-only.
+    pub retention_days: u32,
+}
+
+impl Default for AuditConfig {
+    fn default() -> Self {
+        Self {
+            path: None,
+            retention_days: 30,
+        }
+    }
 }
 
 /// Security middleware configuration (ARC-03).

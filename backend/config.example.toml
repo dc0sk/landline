@@ -41,3 +41,11 @@ allowed_origins = []
 # deployment log rotation (logrotate/systemd).
 # path = "/var/lib/landline/audit.log"
 retention_days = 30
+
+[rig]
+# hamlib rigctld endpoint (ARC-04). Keep it on loopback / a trusted local link
+# (ASM-05); landline is the sole authority for command validation.
+host = "127.0.0.1"
+port = 4532
+# Per-command timeout in milliseconds.
+timeout_ms = 2000

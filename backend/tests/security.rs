@@ -9,15 +9,13 @@ use axum::body::Body;
 use axum::extract::ConnectInfo;
 use axum::http::{Request, StatusCode};
 use landline_backend::app;
-use landline_backend::config::{AuditConfig, AuthConfig, Config, SecurityConfig, ServerConfig};
+use landline_backend::config::{Config, SecurityConfig};
 use tower::ServiceExt;
 
 fn config(security: SecurityConfig) -> Config {
     Config {
-        server: ServerConfig::default(),
-        auth: AuthConfig::default(),
         security,
-        audit: AuditConfig::default(),
+        ..Config::default()
     }
 }
 

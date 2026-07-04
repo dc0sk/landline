@@ -25,6 +25,30 @@ pub struct Config {
     pub security: SecurityConfig,
     /// Audit log settings (ARC-07).
     pub audit: AuditConfig,
+    /// Rig adapter settings (ARC-04).
+    pub rig: RigConfig,
+}
+
+/// Rig adapter configuration (ARC-04): how to reach hamlib/rigctld.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(default)]
+pub struct RigConfig {
+    /// rigctld host (trusted, typically loopback — ASM-05).
+    pub host: String,
+    /// rigctld TCP port (hamlib default 4532).
+    pub port: u16,
+    /// Per-command timeout in milliseconds.
+    pub timeout_ms: u64,
+}
+
+impl Default for RigConfig {
+    fn default() -> Self {
+        Self {
+            host: "127.0.0.1".to_owned(),
+            port: 4532,
+            timeout_ms: 2000,
+        }
+    }
 }
 
 /// Audit log configuration (ARC-07).

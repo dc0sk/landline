@@ -10,15 +10,12 @@ use axum::extract::ConnectInfo;
 use axum::http::{Request, StatusCode};
 use landline_backend::app;
 use landline_backend::auth::{hash_password, Role};
-use landline_backend::config::{
-    AuditConfig, AuthConfig, Config, SecurityConfig, ServerConfig, UserConfig,
-};
+use landline_backend::config::{AuthConfig, Config, SecurityConfig, UserConfig};
 use serde_json::{json, Value};
 use tower::ServiceExt;
 
 fn config(users: Vec<UserConfig>) -> Config {
     Config {
-        server: ServerConfig::default(),
         auth: AuthConfig {
             access_ttl_secs: 900,
             refresh_ttl_secs: 3600,
@@ -29,7 +26,7 @@ fn config(users: Vec<UserConfig>) -> Config {
             rate_limit_per_sec: 1000,
             ..SecurityConfig::default()
         },
-        audit: AuditConfig::default(),
+        ..Config::default()
     }
 }
 

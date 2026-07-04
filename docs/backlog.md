@@ -1,8 +1,8 @@
 ---
 title: Product Backlog
 status: Draft
-version: 0.5.1
-updated: 2026-06-26
+version: 0.5.2
+updated: 2026-07-04
 authors:
   - Simon Keimer (DC0SK)
 ---
@@ -66,9 +66,9 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 | BL-001 | Create system-requirements.md with all FR/NFR IDs | Must | 0 | S | — | All FR/NFR | — | Done |
 | BL-002 | Create test-strategy.md with traceability matrix | Must | 0 | S | BL-001 | All FR/NFR | — | Done |
 | BL-003 | Create backlog.md (this document) | Must | 0 | S | BL-001 | — | — | Done |
-| BL-004 | Create roadmap.md with phase/release plan | Must | 0 | S | BL-001 | — | — | In Progress |
-| BL-005 | Define change control process for doc updates | Must | 0 | S | BL-001 | — | — | Proposed |
-| BL-006 | Create governance charter with security-first policy | Must | 0 | S | BL-001 | NFR-SEC-*, NFR-LIC-* | TC-SEC-* | Proposed |
+| BL-004 | Create roadmap.md with phase/release plan | Must | 0 | S | BL-001 | — | — | Done |
+| BL-005 | Define change control process for doc updates | Must | 0 | S | BL-001 | — | — | Done |
+| BL-006 | Create governance charter with security-first policy | Must | 0 | S | BL-001 | NFR-SEC-*, NFR-LIC-* | TC-SEC-* | Done |
 
 **Acceptance Criteria — BL-005:** Change control procedure is documented in docs/governance.md or equivalent; any PR touching requirements, tests, backlog, or roadmap must update all four artifacts together.
 **Acceptance Criteria — BL-006:** docs/governance.md defines security-first as a release-gated governance rule and includes exception handling requirements.
@@ -79,12 +79,13 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 
 | ID | Title | Priority | Phase | Est. | Deps | Req IDs | Test IDs | Status |
 |---|---|---|---|---|---|---|---|---|
-| BL-010 | Document trust boundaries and deployment modes | Must | 0 | S | BL-001 | NFR-SEC-* | — | Proposed |
-| BL-011 | Define security release gates and acceptance criteria | Must | 0 | S | BL-010 | NFR-SEC-* | TC-SEC-* | Proposed |
+| BL-010 | Document trust boundaries and deployment modes | Must | 0 | S | BL-001 | NFR-SEC-* | — | Done |
+| BL-011 | Define security release gates and acceptance criteria | Must | 0 | S | BL-010 | NFR-SEC-* | TC-SEC-* | Done |
 | BL-012 | Define secrets storage and rotation policy | Must | 0 | S | BL-010 | NFR-SEC-03 | TC-SEC-03 | Proposed |
-| BL-013 | Create docs/security.md (threat model + controls) | Must | 0 | M | BL-010 | NFR-SEC-* | — | Proposed |
+| BL-013 | Create docs/security.md (threat model + controls) | Must | 0 | M | BL-010 | NFR-SEC-* | — | Done |
 
 **Acceptance Criteria — BL-011:** Documented list of security gates with pass/fail criteria; referenced in phase exit checklists in roadmap.
+**Note — BL-012:** Partially met, so kept Proposed: docs/security.md §8 defines secrets *storage* (0600 file mode, no credentials in URLs/logs, no secrets in container images) but the *rotation* policy is only deferred there ("defined before production release") and remains an open TODO in security.md §9 (key/token rotation runbook with operational cadence).
 
 ---
 
@@ -217,8 +218,8 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 
 | ID | Title | Priority | Phase | Est. | Deps | Req IDs | Test IDs | Status |
 |---|---|---|---|---|---|---|---|---|
-| BL-120 | Add top-level LICENSE with AGPL-3.0-only text | Must | 0 | S | — | NFR-LIC-01–NFR-LIC-02 | TC-LIC-02 | Proposed |
-| BL-121 | Add AGPL license notice in core project docs | Must | 0 | S | BL-120 | NFR-LIC-02 | TC-LIC-02 | Proposed |
+| BL-120 | Add top-level LICENSE with AGPL-3.0-only text | Must | 0 | S | — | NFR-LIC-01–NFR-LIC-02 | TC-LIC-02 | Done |
+| BL-121 | Add AGPL license notice in core project docs | Must | 0 | S | BL-120 | NFR-LIC-02 | TC-LIC-02 | Done |
 | BL-122 | Add license compliance check to release checklist | Should | 4 | S | BL-120 | NFR-LIC-01–NFR-LIC-02 | TC-LIC-01–TC-LIC-02 | Proposed |
 
 ---
@@ -239,6 +240,7 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.5.2 | 2026-07-04 | DC0SK | Phase 0 reconciliation: verified deliverables against repo and moved BL-004–BL-006, BL-010–BL-011, BL-013, BL-120–BL-121 to Done; BL-012 kept Proposed (rotation policy still open, see note). |
 | 0.5.1 | 2026-06-26 | DC0SK | Migrated to area-coded FR/NFR/TC ids and new doc-tree frontmatter. |
 | 0.5.0 | 2026-05-13 | — | Linked GPIO backlog item to security requirement/test (allowlist + safe startup states) |
 | 0.4.0 | 2026-05-13 | — | Added Phase 1 backlog item for Raspberry Pi GPIO digital I/O control |

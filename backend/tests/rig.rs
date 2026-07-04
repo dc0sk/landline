@@ -2,9 +2,11 @@
 //! (NFR-MAINT-02). Traces TC-RIG-07 (connect, send command, parse response).
 
 use std::net::SocketAddr;
+use std::sync::Arc;
+use std::time::Duration;
 
 use landline_backend::config::RigConfig;
-use landline_backend::rig::{Mode, RigAdapter};
+use landline_backend::rig::{Mode, PttGuard, RigAdapter};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpListener;
 
@@ -54,6 +56,7 @@ fn adapter_for(addr: SocketAddr) -> RigAdapter {
         host: addr.ip().to_string(),
         port: addr.port(),
         timeout_ms: 2000,
+        ..RigConfig::default()
     })
 }
 
@@ -80,6 +83,25 @@ async fn invalid_frequency_is_rejected_without_contacting_rig() {
         host: "127.0.0.1".to_owned(),
         port: 1, // nothing listens here; we must never reach it
         timeout_ms: 200,
+        ..RigConfig::default()
     });
     assert!(rig.set_frequency(-1).await.is_err());
+}
+
+#[tokio::test]
+async fn ptt_safety_timeout_auto_unkeys() {
+    // TC-SEC-07 / NFR-SEC-07: leave PTT active; the server auto-deactivates it
+    // after the safety timeout.
+    let addr = spawn_mock_rigctld().await;
+    let rig = Arc::new(adapter_for(addr));
+    let ptt = PttGuard::new(Arc::clone(&rig), Duration::from_millis(100));
+
+    ptt.activate().await.unwrap();
+    assert!(ptt.is_active());
+
+    tokio::time::sleep(Duration::from_millis(300)).await;
+    assert!(
+        !ptt.is_active(),
+        "PTT should auto-unkey after the safety timeout"
+    );
 }

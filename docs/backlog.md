@@ -1,7 +1,7 @@
 ---
 title: Product Backlog
 status: Draft
-version: 0.5.7
+version: 0.5.8
 updated: 2026-07-04
 authors:
   - Simon Keimer (DC0SK)
@@ -97,18 +97,18 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 | BL-021 | Implement auth middleware (JWT, expiry, role claims) | Must | 1 | M | BL-020, BL-012 | FR-AUTH-01–FR-AUTH-05, NFR-SEC-01–NFR-SEC-02 | TC-AUTH-01–TC-AUTH-05, TC-SEC-01–TC-SEC-02 | In Progress |
 | BL-022 | Implement rate limiting and frame/size limits | Must | 1 | S | BL-021 | NFR-SEC-04–NFR-SEC-05 | TC-SEC-04–TC-SEC-05 | In Progress |
 | BL-023 | Implement CORS origin policy | Must | 1 | S | BL-021 | NFR-SEC-06 | TC-SEC-06 | Done |
-| BL-024 | Implement audit log subsystem | Must | 1 | M | BL-020 | FR-AUDIT-01–FR-AUDIT-04 | TC-AUDIT-01–TC-AUDIT-02 | In Progress |
+| BL-024 | Implement audit log subsystem | Must | 1 | M | BL-020 | FR-AUDIT-01–FR-AUDIT-04 | TC-AUDIT-01–TC-AUDIT-02 | Done |
 | BL-025 | Implement rigctld TCP adapter with command sanitisation | Must | 1 | M | BL-020 | FR-RIG-08–FR-RIG-09 | TC-RIG-07–TC-RIG-08 | Done |
-| BL-026 | Implement frequency read/set handlers | Must | 1 | S | BL-025, BL-021 | FR-RIG-01–FR-RIG-02 | TC-RIG-01–TC-RIG-02 | Proposed |
-| BL-027 | Implement mode read/set handlers | Must | 1 | S | BL-025, BL-021 | FR-RIG-03–FR-RIG-04 | TC-RIG-03 | Proposed |
-| BL-028 | Implement PTT handler with role check and safety timeout | Must | 1 | M | BL-025, BL-021 | FR-RIG-05, NFR-SEC-07 | TC-RIG-04–TC-RIG-05, TC-SEC-07 | Proposed |
+| BL-026 | Implement frequency read/set handlers | Must | 1 | S | BL-025, BL-021 | FR-RIG-01–FR-RIG-02 | TC-RIG-01–TC-RIG-02 | Done |
+| BL-027 | Implement mode read/set handlers | Must | 1 | S | BL-025, BL-021 | FR-RIG-03–FR-RIG-04 | TC-RIG-03 | Done |
+| BL-028 | Implement PTT handler with role check and safety timeout | Must | 1 | M | BL-025, BL-021 | FR-RIG-05, NFR-SEC-07 | TC-RIG-04–TC-RIG-05, TC-SEC-07 | Done |
 | BL-029 | Implement S-meter streaming | Should | 1 | S | BL-025 | FR-RIG-06 | TC-RIG-06 | Proposed |
-| BL-030 | Implement rig access mutex for concurrent clients | Must | 1 | S | BL-025 | FR-RIG-10 | TC-RIG-09 | Proposed |
+| BL-030 | Implement rig access mutex for concurrent clients | Must | 1 | S | BL-025 | FR-RIG-10 | TC-RIG-09 | Done |
 | BL-031 | Implement rigctld reconnect/circuit-breaker | Should | 1 | M | BL-025 | NFR-REL-02 | TC-REL-02 | Proposed |
 | BL-032 | Structured tracing/logging integration | Must | 1 | S | BL-020 | NFR-SEC-09, NFR-SEC-12 | TC-SEC-09–TC-SEC-10 | In Progress |
 | BL-033 | Implement Raspberry Pi GPIO control API for at least 5 digital pins | Must | 1 | M | BL-020, BL-021 | FR-GPIO-01, NFR-SEC-16 | TC-GPIO-01, TC-SEC-15 | Proposed |
 
-**Note — BL-024:** In Progress. The ARC-07 audit subsystem is implemented (SHA-256 hash-chained tamper-evident events, durable append file, Admin `GET /api/audit`) and auth-failure logging (FR-AUDIT-04 / TC-AUDIT-02) is wired and tested. FR-AUDIT-01 rig state-change auditing completes when the rig control handlers call `record_action` (BL-028 and neighbours); FR-AUDIT-03 30-day retention (TC-AUDIT-03) is enforced by deployment log rotation.
+**Note — BL-024:** Done. The ARC-07 audit subsystem (SHA-256 hash-chained tamper-evident events, durable append file, Admin `GET /api/audit`) logs auth failures (FR-AUDIT-04 / TC-AUDIT-02) and rig state-changes via the control handlers (FR-AUDIT-01 / TC-AUDIT-01, verified). FR-AUDIT-03 30-day retention (TC-AUDIT-03) is enforced by deployment log rotation.
 
 **Note — BL-022:** In Progress. Per-client rate limiting (NFR-SEC-04) and the HTTP request body-size limit are implemented in the ARC-03 security middleware. The WebSocket **frame**-size cap (NFR-SEC-05 / TC-SEC-05) is deferred until the WS endpoints land (spectrum/audio, Phase 2/3); rate-limit keying on `X-Forwarded-For` behind the reverse proxy is a Phase-4 follow-up (BL-100/101).
 
@@ -244,6 +244,7 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.5.8 | 2026-07-04 | DC0SK | BL-026/027/028 (freq/mode/PTT handlers) + BL-030 (rig mutex) → Done; BL-024 (audit) → Done (rig-action auditing now verified, TC-AUDIT-01). Rig control endpoints RBAC-gated + audited; PTT safety timeout (NFR-SEC-07). |
 | 0.5.7 | 2026-07-04 | DC0SK | BL-025 (rigctld adapter) → Done: ARC-04 typed async rigctld client with allowlist + range validation (injection-proof), serialised access, reconnect; mock-rigctld + validation tests. |
 | 0.5.6 | 2026-07-04 | DC0SK | BL-024 (audit log) → In Progress: ARC-07 hash-chained tamper-evident audit subsystem + auth-failure logging + Admin view; rig-action auditing lands with rig handlers. |
 | 0.5.5 | 2026-07-04 | DC0SK | BL-023 (CORS) → Done; BL-022 (rate/size limits) → In Progress (rate limiting + HTTP body limit done; WS frame cap deferred to WS endpoints). ARC-03 security middleware. |

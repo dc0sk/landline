@@ -13,6 +13,8 @@
 //! which is the basis for transient-disconnect recovery (NFR-REL-02; the full
 //! circuit breaker is action A16).
 
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::Arc;
 use std::time::Duration;
 
 use axum::http::StatusCode;
@@ -291,6 +293,77 @@ async fn exchange(
     })
     .await
     .map_err(|_| RigError::Timeout)?
+}
+
+/// PTT controller enforcing the server-side safety timeout (NFR-SEC-07).
+///
+/// When PTT is activated the server arms a timer; if PTT is not deactivated or
+/// refreshed before it elapses, the server auto-unkeys the rig. A generation
+/// counter ensures a stale timer never unkeys a later, still-valid transmission.
+pub struct PttGuard {
+    inner: Arc<PttInner>,
+}
+
+struct PttInner {
+    adapter: Arc<RigAdapter>,
+    timeout: Duration,
+    generation: AtomicU64,
+    active: AtomicBool,
+}
+
+impl PttGuard {
+    /// Create a guard over `adapter` with the given safety `timeout`.
+    #[must_use]
+    pub fn new(adapter: Arc<RigAdapter>, timeout: Duration) -> Self {
+        Self {
+            inner: Arc::new(PttInner {
+                adapter,
+                timeout,
+                generation: AtomicU64::new(0),
+                active: AtomicBool::new(false),
+            }),
+        }
+    }
+
+    /// Whether PTT is currently active.
+    #[must_use]
+    pub fn is_active(&self) -> bool {
+        self.inner.active.load(Ordering::SeqCst)
+    }
+
+    /// Activate PTT and arm the safety timeout (NFR-SEC-07). Calling again
+    /// refreshes the timer.
+    ///
+    /// # Errors
+    /// Returns [`RigError`] if the rig command fails.
+    pub async fn activate(&self) -> Result<(), RigError> {
+        self.inner.adapter.set_ptt(true).await?;
+        self.inner.active.store(true, Ordering::SeqCst);
+        let generation = self.inner.generation.fetch_add(1, Ordering::SeqCst) + 1;
+
+        let inner = Arc::clone(&self.inner);
+        tokio::spawn(async move {
+            tokio::time::sleep(inner.timeout).await;
+            // Only unkey if this activation is still current and still active.
+            if inner.generation.load(Ordering::SeqCst) == generation
+                && inner.active.swap(false, Ordering::SeqCst)
+            {
+                tracing::warn!("PTT safety timeout elapsed; auto-unkeying");
+                let _ = inner.adapter.set_ptt(false).await;
+            }
+        });
+        Ok(())
+    }
+
+    /// Deactivate PTT and cancel the safety timer.
+    ///
+    /// # Errors
+    /// Returns [`RigError`] if the rig command fails.
+    pub async fn deactivate(&self) -> Result<(), RigError> {
+        self.inner.generation.fetch_add(1, Ordering::SeqCst);
+        self.inner.active.store(false, Ordering::SeqCst);
+        self.inner.adapter.set_ptt(false).await
+    }
 }
 
 fn parse_rprt(line: &str) -> Result<(), RigError> {

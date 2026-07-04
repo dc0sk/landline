@@ -1,7 +1,7 @@
 ---
 title: Action List
 status: Draft
-version: "0.6"
+version: "0.7"
 updated: 2026-07-04
 authors:
   - Simon Keimer (DC0SK)
@@ -34,10 +34,11 @@ License notice: This project is licensed under AGPL-3.0-only. See the top-level 
   logout revocation + RBAC extractor) and the ARC-03 security middleware (A7/A8: per-client
   rate limiting, body-size limit, CORS allowlist). Transport decision recorded in ADR-08
   (TLS/WSS + JWT; TLS-PSK rejected). The ARC-07 audit log (A9: hash-chained,
-  tamper-evident, Admin-viewable) is in place, and the ARC-04 rigctld adapter (A10:
-  typed, validated, injection-proof) has landed. **Next action: A11 — frequency
-  read/set HTTP handlers** (FR-RIG-01/02), the first rig-control endpoints, RBAC-gated
-  and audited.
+  tamper-evident, Admin-viewable) is in place, the ARC-04 rigctld adapter (A10) has landed,
+  and the **rig control endpoints** (A11–A14: frequency, mode, PTT with safety timeout,
+  serialised exclusive access) are live — all RBAC-gated and audited. **Next action: A15 —
+  S-meter streaming** (FR-RIG-06, Observer-readable), then A16 (circuit breaker) and
+  A17 (GPIO).
 - Open Phase 0 remainder: secrets *rotation* policy (BL-012) is deferred to before production
   release — tracked below under Phase 4 preparation.
 
@@ -56,12 +57,12 @@ rigctld adapter → control handlers → GPIO).
 - [x] A6. Implement auth middleware (JWT issue/verify, expiry, role claims, RBAC) — BL-021 · FR-AUTH-01–FR-AUTH-05, NFR-SEC-02 · TC-AUTH-01–TC-AUTH-05 — *done: ARC-02 `auth` module — HS256 JWT (pure-Rust hmac/sha2, per ADR-08), argon2 login, short-lived access + rotating refresh, logout revocation, `AuthUser` extractor + RBAC (`require`); 11 unit + 6 HTTP tests. NFR-SEC-01 (TLS/WSS) is reverse-proxy/Phase 4 (TC-SEC-01); TC-SEC-02 entropy covered by unit test*
 - [x] A7. Implement rate limiting and request/WS-frame size limits — BL-022 · NFR-SEC-04–NFR-SEC-05 · TC-SEC-04–TC-SEC-05 — *done: ARC-03 `security` module — per-client token-bucket rate limiter (default 10/s, keyed on peer IP) + `RequestBodyLimitLayer` (default 64 KiB). WS-frame size cap (TC-SEC-05) lands with the WS endpoints (Phase 2/3); reverse-proxy X-Forwarded-For keying is a Phase-4 follow-up*
 - [x] A8. Implement CORS origin allowlist policy — BL-023 · NFR-SEC-06 · TC-SEC-06 — *done: `security::cors_layer` from configured `allowed_origins` (empty = deny all cross-origin); GET/POST + Authorization/Content-Type headers*
-- [x] A9. Implement audit log subsystem (append-only, state-changing actions + auth failures) — BL-024 · FR-AUDIT-01–FR-AUDIT-04 · TC-AUDIT-01–TC-AUDIT-02 — *done: ARC-07 `audit` module — SHA-256 hash-chained tamper-evident events (`verify_chain`), timestamp/IP/user/action/params (FR-AUDIT-02), durable append file, Admin-only `GET /api/audit`. Auth failures logged with IP, no password (FR-AUDIT-04/NFR-SEC-12). TC-AUDIT-01 (rig-action entry) completes when rig handlers call `record_action` (A13+); FR-AUDIT-03 retention is deployment log-rotation*
+- [x] A9. Implement audit log subsystem (append-only, state-changing actions + auth failures) — BL-024 · FR-AUDIT-01–FR-AUDIT-04 · TC-AUDIT-01–TC-AUDIT-02 — *done: ARC-07 `audit` module — SHA-256 hash-chained tamper-evident events (`verify_chain`), timestamp/IP/user/action/params (FR-AUDIT-02), durable append file, Admin-only `GET /api/audit`. Auth failures logged with IP, no password (FR-AUDIT-04/NFR-SEC-12). TC-AUDIT-01 (rig-action entry) verified once the rig handlers landed (A11–A13); FR-AUDIT-03 retention is deployment log-rotation*
 - [x] A10. Implement rigctld TCP adapter with command allowlist/sanitisation — BL-025 · FR-RIG-08–FR-RIG-09 · TC-RIG-07–TC-RIG-08 — *done: ARC-04 `rig` module — typed async hamlib/rigctld TCP client (freq/mode/PTT/S-meter), allowlisted `Mode` enum + numeric range validation (FR-RIG-09/NFR-SEC-08, injection-proof by construction), async-mutex-serialised access (FR-RIG-10), reconnect-on-failure. Tested against a mock rigctld (TC-RIG-07) + validation units (TC-RIG-08/TC-SEC-08). HTTP 400/502 mapping ready for the A11+ handlers*
-- [ ] A11. Implement frequency read/set handlers — BL-026 · FR-RIG-01–FR-RIG-02 · TC-RIG-01–TC-RIG-02
-- [ ] A12. Implement mode read/set handlers — BL-027 · FR-RIG-03–FR-RIG-04 · TC-RIG-03
-- [ ] A13. Implement PTT handler with role check and safety timeout — BL-028 · FR-RIG-05, NFR-SEC-07 · TC-RIG-04–TC-RIG-05, TC-SEC-07
-- [ ] A14. Implement rig access mutex for concurrent clients — BL-030 · FR-RIG-10 · TC-RIG-09
+- [x] A11. Implement frequency read/set handlers — BL-026 · FR-RIG-01–FR-RIG-02 · TC-RIG-01–TC-RIG-02 — *done: `control` module — `GET/POST /api/rig/frequency` (Operator), out-of-range → 400, set audited*
+- [x] A12. Implement mode read/set handlers — BL-027 · FR-RIG-03–FR-RIG-04 · TC-RIG-03 — *done: `GET/POST /api/rig/mode` (Operator), unsupported/injection mode → 400 (NFR-SEC-08), set audited*
+- [x] A13. Implement PTT handler with role check and safety timeout — BL-028 · FR-RIG-05, NFR-SEC-07 · TC-RIG-04–TC-RIG-05, TC-SEC-07 — *done: `POST /api/rig/ptt` (Operator); `PttGuard` server-side safety timeout auto-unkeys (NFR-SEC-07/TC-SEC-07); Observer denied → 403 and audited (TC-RIG-05)*
+- [x] A14. Implement rig access mutex for concurrent clients — BL-030 · FR-RIG-10 · TC-RIG-09 — *done in the adapter (A10): all rigctld commands serialise through an async mutex, giving exclusive access across concurrent clients*
 - [ ] A15. Implement S-meter streaming — BL-029 · FR-RIG-06 · TC-RIG-06
 - [ ] A16. Implement rigctld reconnect/circuit-breaker — BL-031 · NFR-REL-02 · TC-REL-02
 - [ ] A17. Implement GPIO control API (≥ 5 digital pins, allowlist, safe startup states, role-gated) — BL-033 · FR-GPIO-01, NFR-SEC-16 · TC-GPIO-01, TC-SEC-15
@@ -118,6 +119,7 @@ updated). In addition:
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.7 | 2026-07-04 | DC0SK | Marked A11–A14 done: rig control endpoints (frequency, mode, PTT + safety timeout, serialised exclusive access), RBAC-gated + audited; completes TC-AUDIT-01. Next action A15 (S-meter). |
 | 0.6 | 2026-07-04 | DC0SK | Marked A10 done: ARC-04 rigctld TCP adapter (typed, validated, injection-proof) + mock-rigctld tests. Next action A11 (frequency handlers). |
 | 0.5 | 2026-07-04 | DC0SK | Marked A9 done: ARC-07 tamper-evident audit log (hash chain, auth-failure logging, Admin view). Next action A10 (rigctld adapter). |
 | 0.4 | 2026-07-04 | DC0SK | Marked A7/A8 done: ARC-03 security middleware (rate limiting, body-size limit, CORS allowlist). Next action A9 (audit log). |

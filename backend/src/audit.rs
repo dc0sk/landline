@@ -158,6 +158,11 @@ impl AuditLog {
         )
     }
 
+    /// Record a denied action (RBAC rejection, FR-AUDIT companion to FR-AUTH-04).
+    pub fn record_denied(&self, client_ip: Option<&str>, user: &str, action: &str) -> AuditEvent {
+        self.record(client_ip, Some(user), action, "", Outcome::Failure)
+    }
+
     /// A snapshot of the recent-events window (newest last).
     #[must_use]
     pub fn recent(&self) -> Vec<AuditEvent> {

@@ -10,13 +10,16 @@ explicit **security-first, documentation-first** release discipline.
 > **Status — RE baseline complete; Phase 1 (Secure Control MVP) in progress.**
 > The requirements-engineering and concept baseline (v0.6 Draft) is in [`docs/`](docs/): vision,
 > stakeholder & system requirements, concept/architecture, test strategy, security, governance,
-> deployment, backlog and roadmap. The **backend walking skeleton has landed** (Cargo workspace
-> under [`backend/`](backend/) + [`xtask/`](xtask/): an Axum/Tokio/Tower server with health/version
-> routes, structured tracing, single-file TOML config, and a verified aarch64 Raspberry Pi
-> cross-build). The current work list is in [`docs/action-list.md`](docs/action-list.md) — next up
-> is authenticated rig control. landline is developed **requirements-first and test-driven**, with
-> strict traceability from stakeholder needs down to individual test cases, enforced by a
-> **build-breaking traceability gate** (rules **R1–R5**, see [`docs/README.md`](docs/README.md)).
+> deployment, backlog and roadmap. The **Phase 1 backend is complete** (Cargo workspace under
+> [`backend/`](backend/) + [`xtask/`](xtask/): Axum/Tokio/Tower server with JWT auth + RBAC, rate
+> limiting / body-limit / CORS, a tamper-evident audit log, a validated hamlib/rigctld adapter,
+> rig control (frequency/mode/PTT with safety timeout), S-meter, a circuit breaker, and allowlisted
+> GPIO — all authenticated, RBAC-gated, and audited). The **TypeScript frontend has started**
+> (see [`frontend/`](frontend/)). The current work list is in
+> [`docs/action-list.md`](docs/action-list.md). landline is developed **requirements-first and
+> test-driven**, with strict traceability from stakeholder needs down to individual test cases,
+> enforced by a **build-breaking traceability gate** (rules **R1–R5**, see
+> [`docs/README.md`](docs/README.md)).
 
 ## Building
 

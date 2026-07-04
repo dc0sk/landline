@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>landline</title>
+  </head>
+  <body>
+    <main>
+      <section id="login-view">
+        <h1>landline</h1>
+        <form id="login-form">
+          <label>Name <input id="name" name="name" autocomplete="username" required /></label>
+          <label
+            >Password
+            <input
+              id="password"
+              name="password"
+              type="password"
+              autocomplete="current-password"
+              required
+          /></label>
+          <button type="submit">Sign in</button>
+        </form>
+        <p id="error" role="alert"></p>
+      </section>
+
+      <section id="app-view" hidden>
+        <header>
+          <span id="who"></span>
+          <button id="logout" type="button">Sign out</button>
+        </header>
+        <p>Rig control UI arrives in actions A21–A25 (frequency, mode, PTT, S-meter).</p>
+      </section>
+    </main>
+    <script type="module" src="./dist/main.js"></script>
+  </body>
+</html>

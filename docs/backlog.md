@@ -1,7 +1,7 @@
 ---
 title: Product Backlog
 status: Draft
-version: 0.5.9
+version: 0.5.10
 updated: 2026-07-04
 authors:
   - Simon Keimer (DC0SK)
@@ -122,8 +122,8 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 
 | ID | Title | Priority | Phase | Est. | Deps | Req IDs | Test IDs | Status |
 |---|---|---|---|---|---|---|---|---|
-| BL-040 | Initialize TypeScript/HTML5 frontend project | Must | 1 | S | BL-021 | NFR-COMPAT-01–NFR-COMPAT-02 | — | Proposed |
-| BL-041 | Implement authenticated session bootstrap (login, token storage, logout) | Must | 1 | M | BL-040, BL-021 | FR-AUTH-01–FR-AUTH-05 | TC-AUTH-01–TC-AUTH-05 | Proposed |
+| BL-040 | Initialize TypeScript/HTML5 frontend project | Must | 1 | S | BL-021 | NFR-COMPAT-01–NFR-COMPAT-02 | — | Done |
+| BL-041 | Implement authenticated session bootstrap (login, token storage, logout) | Must | 1 | M | BL-040, BL-021 | FR-AUTH-01–FR-AUTH-05 | TC-AUTH-01–TC-AUTH-05 | Done |
 | BL-042 | Implement frequency display and tuning control | Must | 1 | M | BL-040, BL-026 | FR-RIG-01–FR-RIG-02, NFR-COMPAT-06 | TC-RIG-01–TC-RIG-02, TC-COMPAT-01–TC-COMPAT-02 | Proposed |
 | BL-043 | Implement mode selector | Must | 1 | S | BL-040, BL-027 | FR-RIG-03–FR-RIG-04 | TC-RIG-03 | Proposed |
 | BL-044 | Implement PTT button with visual transmit indicator | Must | 1 | S | BL-040, BL-028 | FR-RIG-05 | TC-RIG-04 | Proposed |
@@ -248,6 +248,7 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.5.10 | 2026-07-04 | DC0SK | BL-040 (TS frontend project) + BL-041 (session bootstrap) → Done: ARC-10 frontend started — typed API/session/backoff modules, login UI, 11 tests, CI frontend job. |
 | 0.5.9 | 2026-07-04 | DC0SK | BL-031 (circuit breaker) + BL-033 (GPIO, ARC-08) → Done; BL-029 (S-meter) → In Progress (read path; streaming rides Phase-2 WS). Phase 1 backend complete. |
 | 0.5.8 | 2026-07-04 | DC0SK | BL-026/027/028 (freq/mode/PTT handlers) + BL-030 (rig mutex) → Done; BL-024 (audit) → Done (rig-action auditing now verified, TC-AUDIT-01). Rig control endpoints RBAC-gated + audited; PTT safety timeout (NFR-SEC-07). |
 | 0.5.7 | 2026-07-04 | DC0SK | BL-025 (rigctld adapter) → Done: ARC-04 typed async rigctld client with allowlist + range validation (injection-proof), serialised access, reconnect; mock-rigctld + validation tests. |

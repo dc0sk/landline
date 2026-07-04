@@ -1,7 +1,7 @@
 ---
 title: Action List
 status: Draft
-version: "0.8"
+version: "0.9"
 updated: 2026-07-04
 authors:
   - Simon Keimer (DC0SK)
@@ -36,9 +36,10 @@ License notice: This project is licensed under AGPL-3.0-only. See the top-level 
   (TLS/WSS + JWT; TLS-PSK rejected). The ARC-07 audit log (A9: hash-chained,
   tamper-evident, Admin-viewable) is in place, the ARC-04 rigctld adapter (A10) has landed,
   the **rig control endpoints** (A11–A14) are live, and the **Phase 1 backend is complete**
-  (A15 S-meter read, A16 circuit breaker, A17 GPIO). All backend actions A1–A17 are done —
-  authenticated, RBAC-gated, rate-limited, audited, injection-hardened. **Next milestone:
-  the frontend (A18–A26)** — TypeScript control UI, then the Phase 1 exit review (A27).
+  (A15 S-meter read, A16 circuit breaker, A17 GPIO). The **frontend has started** (A18–A19:
+  TypeScript project + authenticated session bootstrap, verified with typecheck + 11 tests +
+  build). **Next action: A20/A21** — WebSocket client scaffolding and the frequency
+  display/tuning UI over the REST API, then A22–A25 and the Phase 1 exit review (A27).
 - Open Phase 0 remainder: secrets *rotation* policy (BL-012) is deferred to before production
   release — tracked below under Phase 4 preparation.
 
@@ -71,8 +72,8 @@ rigctld adapter → control handlers → GPIO).
 
 Frontend bootstrap can start in parallel once the auth contract (A6) is stable.
 
-- [ ] A18. Initialize TypeScript/HTML5 frontend project — BL-040 · NFR-COMPAT-01–NFR-COMPAT-02
-- [ ] A19. Implement authenticated session bootstrap (login, token storage, logout) — BL-041 · FR-AUTH-01–FR-AUTH-05 · TC-AUTH-01–TC-AUTH-05
+- [x] A18. Initialize TypeScript/HTML5 frontend project — BL-040 · NFR-COMPAT-01–NFR-COMPAT-02 — *done: ARC-10 `frontend/` — erasable TypeScript (strict tsc, no bundler), `npm` typecheck/test/build, `index.html` shell, CI frontend job*
+- [x] A19. Implement authenticated session bootstrap (login, token storage, logout) — BL-041 · FR-AUTH-01–FR-AUTH-05 · TC-AUTH-01–TC-AUTH-05 — *done: `api.ts` (login/refresh/logout/authed GET), `session.ts` (in-memory tokens — never persisted, XSS-safe; expiry/refresh-window/role checks), `main.ts` login/logout wiring + auto-refresh; 11 unit tests. Browser E2E across the matrix (TC-COMPAT) is the A25/Phase-2 pass*
 - [ ] A20. Implement WebSocket client with reconnect/backoff — BL-046 · NFR-REL-01 · TC-REL-01
 - [ ] A21. Implement frequency display and tuning control — BL-042 · FR-RIG-01–FR-RIG-02, NFR-COMPAT-06 · TC-RIG-01–TC-RIG-02, TC-COMPAT-01–TC-COMPAT-02
 - [ ] A22. Implement mode selector — BL-043 · FR-RIG-03–FR-RIG-04 · TC-RIG-03
@@ -119,6 +120,7 @@ updated). In addition:
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.9 | 2026-07-04 | DC0SK | Marked A18–A19 done: ARC-10 TypeScript frontend project + authenticated session bootstrap (api/session/backoff + login UI), 11 unit tests, CI frontend job. Next action A20/A21. |
 | 0.8 | 2026-07-04 | DC0SK | Marked A15–A17 done: S-meter read endpoint, rig circuit breaker (NFR-REL-02), GPIO control with allowlist + safe states (ARC-08). Phase 1 backend complete; next milestone the frontend (A18+). |
 | 0.7 | 2026-07-04 | DC0SK | Marked A11–A14 done: rig control endpoints (frequency, mode, PTT + safety timeout, serialised exclusive access), RBAC-gated + audited; completes TC-AUDIT-01. Next action A15 (S-meter). |
 | 0.6 | 2026-07-04 | DC0SK | Marked A10 done: ARC-04 rigctld TCP adapter (typed, validated, injection-proof) + mock-rigctld tests. Next action A11 (frequency handlers). |

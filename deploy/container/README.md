@@ -11,8 +11,9 @@ passes the audio-latency and hardware-access thresholds below.
 # From the repo root (the build context is the root):
 docker build -f deploy/container/Dockerfile -t landline-backend:latest .
 
-# Or with compose (place a config.toml next to compose.yml first):
+# Or with compose (place a 0600 config.toml next to compose.yml first):
 cd deploy/container
+chmod 600 config.toml   # the backend rejects a group/world-readable config (NFR-SEC-03)
 docker compose up -d
 ```
 

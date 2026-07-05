@@ -1,7 +1,7 @@
 ---
 title: Action List
 status: Draft
-version: "0.19"
+version: "0.20"
 updated: 2026-07-05
 authors:
   - Simon Keimer (DC0SK)
@@ -58,8 +58,13 @@ License notice: This project is licensed under AGPL-3.0-only. See the top-level 
   parts (libopus, CPAL, WS audio transport, browser Web Audio) are the remainder. **A34
   (split-host) is done** and **A33 (container) artifacts are done** (hardened Dockerfile +
   compose + decision-record skeleton; device-passthrough/latency + the accept/defer decision are
-  Pi HIL). **Next: A32** — audio latency measurement (Pi HIL) — and the Phase-3 audio pipeline
-  device ends, all hardware-in-the-loop.
+  Pi HIL). **Security remainders + TLS front end closed (A36):** the 0600 config check (BL-081),
+  global panic sanitisation (BL-032 / NFR-SEC-09), and the nginx TLS/WSS reverse-proxy config
+  (BL-100/101) are done — **retiring the TLS deferral (NFR-SEC-01 / TC-SEC-01)** that every
+  phase gate had been waiting on, and moving BL-021 to Done. 71 Rust tests. **Remaining
+  software-buildable work:** the ops docs (A38: rollback, runbook, release checklist) and the
+  secrets-rotation policy (A35 / BL-012); everything else (audio pipeline, soak/load, browser
+  matrix) is hardware-in-the-loop.
 - Open Phase 0 remainder: secrets *rotation* policy (BL-012) is deferred to before production
   release — tracked below under Phase 4 preparation.
 
@@ -73,8 +78,8 @@ rigctld adapter → control handlers → GPIO).
 - [x] A1. Initialize Rust workspace (Tokio + Axum + Tower), with `cargo fmt`/`clippy` clean baseline — BL-020 · NFR-MAINT-01 — *done: `backend` + `xtask` crates; walking-skeleton router (`/healthz`, `/version`) with graceful SIGINT/SIGTERM shutdown; integration tests (`backend/tests/api.rs`, NFR-MAINT-02)*
 - [x] A2. Activate latent tooling: rename `.github/workflows/ci.yml.disabled` → `ci.yml`, enable the commented-out Rust steps in `.githooks/pre-commit`/`.githooks/pre-push` (fmt, clippy `-D warnings`, test, audit), and promote the trace gate into `cargo xtask` — BL-020 · NFR-MAINT-01 — *done: CI `rust` job live; hooks run fmt+clippy (pre-commit) and test+audit (pre-push); `cargo xtask trace-gate`/`ci` wrap the gate*
 - [x] A3. Set up cross-compilation for `aarch64-unknown-linux-gnu` in CI from day one — BL-083 · NFR-DEPLOY-01 · TC-DEPLOY-01–TC-DEPLOY-02 — *done: `.cargo/config.toml` linker override + CI cross-build step; verified locally (aarch64 ELF produced)*
-- [x] A4. Implement structured tracing/logging integration (no secrets in logs) — BL-032 · NFR-SEC-09, NFR-SEC-12 · TC-SEC-09–TC-SEC-10 — *skeleton done: `telemetry::init` (env-filter, no credential emission); error-response sanitisation (NFR-SEC-09) lands with the security middleware (A7)*
-- [x] A5. Implement TOML config loader with secure defaults and 0600 permission checks — BL-081 · NFR-DEPLOY-04 — *loader done: single-file TOML, loopback-default bind (NFR-SEC-13), `$LANDLINE_CONFIG` override; 0600 permission enforcement (NFR-SEC-03) still to add*
+- [x] A4. Implement structured tracing/logging integration (no secrets in logs) — BL-032 · NFR-SEC-09, NFR-SEC-12 · TC-SEC-09–TC-SEC-10 — *done: `telemetry::init` (env-filter, no credential emission, NFR-SEC-12); error-response sanitisation (NFR-SEC-09) via typed sanitised errors + a global `catch_panic_layer` that returns a generic 500 with no panic message (tested)*
+- [x] A5. Implement TOML config loader with secure defaults and 0600 permission checks — BL-081 · NFR-DEPLOY-04 — *done: single-file TOML, loopback-default bind (NFR-SEC-13), `$LANDLINE_CONFIG` override, and 0600 enforcement — `load` rejects a group/world-accessible config on Unix (NFR-SEC-03); unit + file tests*
 - [x] A6. Implement auth middleware (JWT issue/verify, expiry, role claims, RBAC) — BL-021 · FR-AUTH-01–FR-AUTH-05, NFR-SEC-02 · TC-AUTH-01–TC-AUTH-05 — *done: ARC-02 `auth` module — HS256 JWT (pure-Rust hmac/sha2, per ADR-08), argon2 login, short-lived access + rotating refresh, logout revocation, `AuthUser` extractor + RBAC (`require`); 11 unit + 6 HTTP tests. NFR-SEC-01 (TLS/WSS) is reverse-proxy/Phase 4 (TC-SEC-01); TC-SEC-02 entropy covered by unit test*
 - [x] A7. Implement rate limiting and request/WS-frame size limits — BL-022 · NFR-SEC-04–NFR-SEC-05 · TC-SEC-04–TC-SEC-05 — *done: ARC-03 `security` module — per-client token-bucket rate limiter (default 10/s, keyed on peer IP) + `RequestBodyLimitLayer` (default 64 KiB). WS-frame size cap (TC-SEC-05) lands with the WS endpoints (Phase 2/3); reverse-proxy X-Forwarded-For keying is a Phase-4 follow-up*
 - [x] A8. Implement CORS origin allowlist policy — BL-023 · NFR-SEC-06 · TC-SEC-06 — *done: `security::cors_layer` from configured `allowed_origins` (empty = deny all cross-origin); GET/POST + Authorization/Content-Type headers*
@@ -119,7 +124,7 @@ Frontend bootstrap can start in parallel once the auth contract (A6) is stable.
 ## 6. Milestone: Phase 4 — release candidate and operations (forward-looking)
 
 - [ ] A35. Define secrets rotation policy and rotation runbook (closes the open BL-012 remainder) — BL-012, BL-105 · NFR-SEC-03 · TC-SEC-03
-- [ ] A36. Production TLS + nginx reverse proxy config — BL-100–BL-101 · NFR-SEC-01 · TC-SEC-01
+- [x] A36. Production TLS + nginx reverse proxy config — BL-100–BL-101 · NFR-SEC-01 · TC-SEC-01 — *done: `deploy/nginx/nginx.conf` — HTTPS-only (plaintext :80 → 308 redirect, TC-SEC-01), TLS 1.2/1.3 + HSTS, WSS `/ws` upgrade proxying, static frontend, and `X-Forwarded-For` (unblocks the BL-022 rate-limit XFF follow-up). Cert provisioning is deployment-time*
 - [ ] A37. Soak test (24 h) and 3-client load test on Pi 4 — BL-102–BL-103 · NFR-REL-03, NFR-PERF-04 · TC-REL-03, TC-PERF-04
 - [ ] A38. Rollback procedure, ops runbook, final doc alignment, release checklist incl. license compliance — BL-082, BL-104–BL-106, BL-122 · NFR-DEPLOY-05, NFR-LIC-01–NFR-LIC-02 · TC-DEPLOY-06, TC-LIC-01–TC-LIC-02
 
@@ -140,6 +145,7 @@ updated). In addition:
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.20 | 2026-07-05 | DC0SK | Closed security remainders + TLS: A36 (nginx TLS/WSS), 0600 config check, panic sanitisation. Retires the NFR-SEC-01/TC-SEC-01 deferral; BL-021 Done. 71 Rust tests. |
 | 0.19 | 2026-07-05 | DC0SK | A34 (split-host: WireGuard/Tailscale/SSH profiles + tunnel-bind) done; A33 (container Dockerfile/compose + decision skeleton + hadolint CI) artifacts done. Remaining Phase-3 audio + container eval are Pi HIL. |
 | 0.18 | 2026-07-05 | DC0SK | Phase 3 started (A31 in progress): ARC-05 audio software core — jitter buffer (loss concealment) + codec seam + config, C-free. 67 Rust tests. Native/HIL audio parts remain. |
 | 0.17 | 2026-07-05 | DC0SK | Phase 2 exit review: reconciled roadmap §6 exit criteria + test-strategy §6b execution record. Phase 2 development-complete; gate pending browser-matrix + Pi HIL. Next milestone Phase 3 (audio). |

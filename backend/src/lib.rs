@@ -104,4 +104,6 @@ pub fn app(config: &Config) -> Router {
         .layer(security::cors_layer(&config.security.allowed_origins))
         .layer(RequestBodyLimitLayer::new(config.security.max_body_bytes))
         .layer(TraceLayer::new_for_http())
+        // Outermost: catch any handler panic and return a sanitised 500 (NFR-SEC-09).
+        .layer(security::catch_panic_layer())
 }

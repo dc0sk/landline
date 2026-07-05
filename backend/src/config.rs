@@ -271,6 +271,46 @@ pub enum ConfigError {
         #[source]
         source: toml::de::Error,
     },
+    /// The config file is readable/writable by group or others (NFR-SEC-03).
+    #[error("insecure permissions on {path}: {mode:#o} (require owner-only, e.g. 0600)")]
+    InsecurePermissions {
+        /// Offending path.
+        path: PathBuf,
+        /// The file's permission bits.
+        mode: u32,
+    },
+}
+
+/// Whether a Unix mode grants no group/other access (owner-only, NFR-SEC-03).
+#[must_use]
+#[allow(clippy::verbose_bit_mask)] // the octal mask reads clearer than trailing_zeros here
+fn mode_is_owner_only(mode: u32) -> bool {
+    mode & 0o077 == 0
+}
+
+#[cfg(unix)]
+fn check_permissions(path: &Path) -> Result<(), ConfigError> {
+    use std::os::unix::fs::PermissionsExt;
+    let mode = std::fs::metadata(path)
+        .map_err(|source| ConfigError::Read {
+            path: path.to_path_buf(),
+            source,
+        })?
+        .permissions()
+        .mode();
+    if mode_is_owner_only(mode) {
+        Ok(())
+    } else {
+        Err(ConfigError::InsecurePermissions {
+            path: path.to_path_buf(),
+            mode: mode & 0o777,
+        })
+    }
+}
+
+#[cfg(not(unix))]
+fn check_permissions(_path: &Path) -> Result<(), ConfigError> {
+    Ok(())
 }
 
 impl Config {
@@ -296,10 +336,15 @@ impl Config {
     /// Returns [`ConfigError`] if the file exists but cannot be read or parsed.
     pub fn load(path: &Path) -> Result<Self, ConfigError> {
         match std::fs::read_to_string(path) {
-            Ok(text) => toml::from_str(&text).map_err(|source| ConfigError::Parse {
-                path: path.to_path_buf(),
-                source,
-            }),
+            Ok(text) => {
+                // Fail closed if the file is group/other-accessible (NFR-SEC-03):
+                // the config may reference secret files and must not be exposed.
+                check_permissions(path)?;
+                toml::from_str(&text).map_err(|source| ConfigError::Parse {
+                    path: path.to_path_buf(),
+                    source,
+                })
+            }
             Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(Self::default()),
             Err(source) => Err(ConfigError::Read {
                 path: path.to_path_buf(),
@@ -324,5 +369,45 @@ mod tests {
         let cfg: Config = toml::from_str("[server]\nport = 9000\n").unwrap();
         assert_eq!(cfg.server.port, 9000);
         assert!(cfg.server.bind.is_loopback());
+    }
+
+    #[test]
+    fn owner_only_mode_detection() {
+        // NFR-SEC-03: owner-only (no group/other bits).
+        assert!(super::mode_is_owner_only(0o600));
+        assert!(super::mode_is_owner_only(0o700));
+        assert!(!super::mode_is_owner_only(0o640));
+        assert!(!super::mode_is_owner_only(0o644));
+        assert!(!super::mode_is_owner_only(0o666));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn load_rejects_group_readable_config() {
+        use super::ConfigError;
+        use std::os::unix::fs::PermissionsExt;
+        let path =
+            std::env::temp_dir().join(format!("landline-cfg-{}-insecure.toml", std::process::id()));
+        std::fs::write(&path, "[server]\nport = 8443\n").unwrap();
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o644)).unwrap();
+        let result = Config::load(&path);
+        let _ = std::fs::remove_file(&path);
+        assert!(matches!(
+            result,
+            Err(ConfigError::InsecurePermissions { .. })
+        ));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn load_accepts_owner_only_config() {
+        use std::os::unix::fs::PermissionsExt;
+        let path =
+            std::env::temp_dir().join(format!("landline-cfg-{}-secure.toml", std::process::id()));
+        std::fs::write(&path, "[server]\nport = 9000\n").unwrap();
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600)).unwrap();
+        let config = Config::load(&path).unwrap();
+        let _ = std::fs::remove_file(&path);
+        assert_eq!(config.server.port, 9000);
     }
 }

@@ -1,7 +1,7 @@
 ---
 title: Action List
 status: Draft
-version: "0.20"
+version: "0.21"
 updated: 2026-07-05
 authors:
   - Simon Keimer (DC0SK)
@@ -65,6 +65,11 @@ License notice: This project is licensed under AGPL-3.0-only. See the top-level 
   software-buildable work:** the ops docs (A38: rollback, runbook, release checklist) and the
   secrets-rotation policy (A35 / BL-012); everything else (audio pipeline, soak/load, browser
   matrix) is hardware-in-the-loop.
+- **All software-buildable work is now complete.** A35 (secrets rotation, security.md §8.2) and
+  A38 (ops runbook + release checklist) are done, closing the last Phase-0 remainder (BL-012).
+  What remains is exclusively **hardware-in-the-loop / browser-matrix**: the audio pipeline
+  device ends + latency (A31 remainder, A32), soak/load (A37), container passthrough/decision
+  (A33 remainder), and the browser/Pi test execution that fills the final trace records (BL-104).
 - Open Phase 0 remainder: secrets *rotation* policy (BL-012) is deferred to before production
   release — tracked below under Phase 4 preparation.
 
@@ -123,10 +128,10 @@ Frontend bootstrap can start in parallel once the auth contract (A6) is stable.
 
 ## 6. Milestone: Phase 4 — release candidate and operations (forward-looking)
 
-- [ ] A35. Define secrets rotation policy and rotation runbook (closes the open BL-012 remainder) — BL-012, BL-105 · NFR-SEC-03 · TC-SEC-03
+- [x] A35. Define secrets rotation policy and rotation runbook (closes the open BL-012 remainder) — BL-012, BL-105 · NFR-SEC-03 · TC-SEC-03 — *done: security.md §8.2 rotation policy (JWT secret, user hashes, TLS key, tunnel keys — cadences + procedures + immediate-rotation triggers); rotation quick-reference in `deploy/RUNBOOK.md`*
 - [x] A36. Production TLS + nginx reverse proxy config — BL-100–BL-101 · NFR-SEC-01 · TC-SEC-01 — *done: `deploy/nginx/nginx.conf` — HTTPS-only (plaintext :80 → 308 redirect, TC-SEC-01), TLS 1.2/1.3 + HSTS, WSS `/ws` upgrade proxying, static frontend, and `X-Forwarded-For` (unblocks the BL-022 rate-limit XFF follow-up). Cert provisioning is deployment-time*
 - [ ] A37. Soak test (24 h) and 3-client load test on Pi 4 — BL-102–BL-103 · NFR-REL-03, NFR-PERF-04 · TC-REL-03, TC-PERF-04
-- [ ] A38. Rollback procedure, ops runbook, final doc alignment, release checklist incl. license compliance — BL-082, BL-104–BL-106, BL-122 · NFR-DEPLOY-05, NFR-LIC-01–NFR-LIC-02 · TC-DEPLOY-06, TC-LIC-01–TC-LIC-02
+- [x] A38. Rollback procedure, ops runbook, final doc alignment, release checklist incl. license compliance — BL-082, BL-104–BL-106, BL-122 · NFR-DEPLOY-05, NFR-LIC-01–NFR-LIC-02 · TC-DEPLOY-06, TC-LIC-01–TC-LIC-02 — *done: `deploy/RUNBOOK.md` (rollback BL-082/NFR-DEPLOY-05, ops runbook BL-105) + `docs/release-checklist.md` (go/no-go gate: traceability, security, deployment, license-compliance BL-122/TC-LIC). BL-104 final trace-alignment stays open until the first release fills the phase execution records from real (HIL) runs*
 
 ---
 
@@ -145,6 +150,7 @@ updated). In addition:
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.21 | 2026-07-05 | DC0SK | Ops/release docs (A35, A38): secrets rotation policy, ops runbook + rollback, release checklist + license gate. Closes BL-012. All software-buildable work complete; only HIL/browser remains. |
 | 0.20 | 2026-07-05 | DC0SK | Closed security remainders + TLS: A36 (nginx TLS/WSS), 0600 config check, panic sanitisation. Retires the NFR-SEC-01/TC-SEC-01 deferral; BL-021 Done. 71 Rust tests. |
 | 0.19 | 2026-07-05 | DC0SK | A34 (split-host: WireGuard/Tailscale/SSH profiles + tunnel-bind) done; A33 (container Dockerfile/compose + decision skeleton + hadolint CI) artifacts done. Remaining Phase-3 audio + container eval are Pi HIL. |
 | 0.18 | 2026-07-05 | DC0SK | Phase 3 started (A31 in progress): ARC-05 audio software core — jitter buffer (loss concealment) + codec seam + config, C-free. 67 Rust tests. Native/HIL audio parts remain. |

@@ -1,7 +1,7 @@
 ---
 title: Product Backlog
 status: Draft
-version: 0.5.19
+version: 0.5.20
 updated: 2026-07-05
 authors:
   - Simon Keimer (DC0SK)
@@ -81,7 +81,7 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 |---|---|---|---|---|---|---|---|---|
 | BL-010 | Document trust boundaries and deployment modes | Must | 0 | S | BL-001 | NFR-SEC-* | — | Done |
 | BL-011 | Define security release gates and acceptance criteria | Must | 0 | S | BL-010 | NFR-SEC-* | TC-SEC-* | Done |
-| BL-012 | Define secrets storage and rotation policy | Must | 0 | S | BL-010 | NFR-SEC-03 | TC-SEC-03 | Proposed |
+| BL-012 | Define secrets storage and rotation policy | Must | 0 | S | BL-010 | NFR-SEC-03 | TC-SEC-03 | Done |
 | BL-013 | Create docs/security.md (threat model + controls) | Must | 0 | M | BL-010 | NFR-SEC-* | — | Done |
 
 **Acceptance Criteria — BL-011:** Documented list of security gates with pass/fail criteria; referenced in phase exit checklists in roadmap.
@@ -122,7 +122,9 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 
 **Note — BL-033:** Done. The ARC-08 GPIO controller enforces the pin allowlist and safe startup states (NFR-SEC-16) with Operator-gated, audited `/api/gpio/{pin}` endpoints, verified in-memory (TC-SEC-15). The Raspberry Pi sysfs/gpiod hardware backend is a thin deployment-time adapter; TC-GPIO-01 is a hardware-in-the-loop System test.
 
-**Note — security remainders closed:** BL-081 (config now rejects group/world-accessible files, 0600 enforced on Unix — NFR-SEC-03), BL-032 (global panic sanitisation via `catch_panic_layer` completes NFR-SEC-09 alongside the typed sanitised errors), and BL-100/101 (nginx TLS reverse-proxy config in `deploy/nginx/` delivers NFR-SEC-01/TC-SEC-01) are Done. With TLS delivered by the proxy, BL-021 (auth middleware) is now Done. The last open Phase-0 remainder is BL-012 (secrets *rotation* policy).
+**Note — security remainders closed:** BL-081 (config now rejects group/world-accessible files, 0600 enforced on Unix — NFR-SEC-03), BL-032 (global panic sanitisation via `catch_panic_layer` completes NFR-SEC-09 alongside the typed sanitised errors), and BL-100/101 (nginx TLS reverse-proxy config in `deploy/nginx/` delivers NFR-SEC-01/TC-SEC-01) are Done. With TLS delivered by the proxy, BL-021 (auth middleware) is now Done. BL-012 (secrets *rotation* policy) is now Done — see [security.md §8.2](security.md).
+
+**Note — ops/release docs (A35/A38):** BL-012 (rotation policy, security.md §8.2), BL-082 (rollback) + BL-105 (ops runbook) in `deploy/RUNBOOK.md`, and BL-106 (release checklist) + BL-122 (license-compliance gate) in `docs/release-checklist.md` are Done. BL-104 (final doc alignment / all IDs traced) stays In Progress until the first release, when the phase execution records are all filled from real test runs (currently HIL-gated).
 
 **Note — BL-024:** Done. The ARC-07 audit subsystem (SHA-256 hash-chained tamper-evident events, durable append file, Admin `GET /api/audit`) logs auth failures (FR-AUDIT-04 / TC-AUDIT-02) and rig state-changes via the control handlers (FR-AUDIT-01 / TC-AUDIT-01, verified). FR-AUDIT-03 30-day retention (TC-AUDIT-03) is enforced by deployment log rotation.
 
@@ -190,7 +192,7 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 |---|---|---|---|---|---|---|---|---|
 | BL-080 | Write systemd service unit (start/stop/restart, resource limits) | Must | 1 | S | BL-020 | NFR-DEPLOY-02 | TC-DEPLOY-03 | Done |
 | BL-081 | Configure TOML config file with defaults | Must | 1 | S | BL-020 | NFR-DEPLOY-04 | — | Done |
-| BL-082 | Document rollback procedure for native deployment | Must | 4 | S | BL-080 | NFR-DEPLOY-05 | TC-DEPLOY-06 | Proposed |
+| BL-082 | Document rollback procedure for native deployment | Must | 4 | S | BL-080 | NFR-DEPLOY-05 | TC-DEPLOY-06 | Done |
 | BL-083 | Cross-compile release binary for aarch64-unknown-linux-gnu | Must | 1 | S | BL-020 | NFR-DEPLOY-01 | TC-DEPLOY-01–TC-DEPLOY-02 | Done |
 
 ---
@@ -216,9 +218,9 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 | BL-101 | Write nginx reverse proxy config (TLS termination, WS proxy headers) | Must | 4 | S | BL-100 | NFR-SEC-01 | TC-SEC-01 | Done |
 | BL-102 | Soak test: 24 h continuous operation on Pi 4 | Must | 4 | L | EP-07 | NFR-REL-03 | TC-REL-03 | Proposed |
 | BL-103 | Pi 4 load test: 3 clients, full features; CPU < 50 % | Must | 4 | M | EP-07 | NFR-PERF-04 | TC-PERF-04 | Proposed |
-| BL-104 | Final documentation alignment (all FR/NFR IDs traced) | Must | 4 | M | All | All FR/NFR | All TC | Proposed |
-| BL-105 | Write ops runbook (start, stop, update, token rotation, log access) | Must | 4 | M | BL-080, BL-094 | NFR-DEPLOY-02, NFR-DEPLOY-05 | — | Proposed |
-| BL-106 | Create release checklist referencing all release gate criteria | Must | 4 | S | BL-104 | — | — | Proposed |
+| BL-104 | Final documentation alignment (all FR/NFR IDs traced) | Must | 4 | M | All | All FR/NFR | All TC | In Progress |
+| BL-105 | Write ops runbook (start, stop, update, token rotation, log access) | Must | 4 | M | BL-080, BL-094 | NFR-DEPLOY-02, NFR-DEPLOY-05 | — | Done |
+| BL-106 | Create release checklist referencing all release gate criteria | Must | 4 | S | BL-104 | — | — | Done |
 
 ---
 
@@ -240,7 +242,7 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 |---|---|---|---|---|---|---|---|---|
 | BL-120 | Add top-level LICENSE with AGPL-3.0-only text | Must | 0 | S | — | NFR-LIC-01–NFR-LIC-02 | TC-LIC-02 | Done |
 | BL-121 | Add AGPL license notice in core project docs | Must | 0 | S | BL-120 | NFR-LIC-02 | TC-LIC-02 | Done |
-| BL-122 | Add license compliance check to release checklist | Should | 4 | S | BL-120 | NFR-LIC-01–NFR-LIC-02 | TC-LIC-01–TC-LIC-02 | Proposed |
+| BL-122 | Add license compliance check to release checklist | Should | 4 | S | BL-120 | NFR-LIC-01–NFR-LIC-02 | TC-LIC-01–TC-LIC-02 | Done |
 
 ---
 
@@ -260,6 +262,7 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.5.20 | 2026-07-05 | DC0SK | Ops/release docs: BL-012 (rotation policy), BL-082 (rollback), BL-105 (runbook), BL-106 (release checklist), BL-122 (license gate) → Done. BL-104 In Progress (final trace pending HIL). |
 | 0.5.19 | 2026-07-05 | DC0SK | Closed security remainders + TLS: BL-081 (0600 config check), BL-032 (panic sanitisation/NFR-SEC-09), BL-100/101 (nginx TLS proxy/NFR-SEC-01), BL-021 (auth) → Done. Deferral TC-SEC-01 now met by config. |
 | 0.5.18 | 2026-07-05 | DC0SK | Split-host (BL-110–114) → Done; container artifacts BL-090/091 → Done, BL-094 In Progress (decision pending Pi HIL). Deployment breadth artifacts landed. |
 | 0.5.17 | 2026-07-05 | DC0SK | Phase 3 start: audio software core (ARC-05 jitter buffer + codec seam + config) → BL-076/077 In Progress (FR-AUD-05/06). Native/HIL audio parts remain. |

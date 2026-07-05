@@ -1,8 +1,8 @@
 ---
 title: Security Model and Controls
 status: Draft
-version: 0.1.1
-updated: 2026-06-26
+version: 0.2.0
+updated: 2026-07-05
 authors:
   - Simon Keimer (DC0SK)
 ---
@@ -84,21 +84,41 @@ A release is blocked if any applicable security test fails.
 
 ## 8. Secrets and Key Handling
 
-- Secrets and private keys stored with file mode 0600 under service-owned account.
-- No credentials in URLs or logs.
-- Rotation policy defined before production release.
-- No secrets embedded in container images.
+### 8.1 Storage (NFR-SEC-03)
+
+- Secrets and private keys are stored in files with mode **0600**, owned by the
+  service user. The backend **fails closed** on a group/world-accessible
+  `config.toml` (see `config::Config::load`), and the deployment installs it 0600.
+- No credentials appear in URLs or logs (NFR-SEC-12): the audit log stores only
+  the username/action/params (never passwords), the WS auth token travels in the
+  message body rather than the query string, and tracing never emits secrets.
+- No secrets are embedded in container image layers — the config is mounted at
+  runtime, not built in (NFR-SEC-10).
+
+### 8.2 Rotation policy (NFR-SEC-03, TC-SEC-03) — BL-012
+
+| Secret | Where | Cadence | Procedure |
+|---|---|---|---|
+| **JWT signing secret** | In-memory, generated per process start (256-bit CSPRNG) | Every restart; force with a rolling restart | Restart the service; all existing access tokens become invalid and clients re-authenticate. When a persisted signing key is later introduced, rotate it on the same cadence as the TLS key and restart. |
+| **User password hashes** | `config.toml` (argon2) | On compromise, on operator change, and at least every 180 days | Regenerate with `landline_backend::auth::hash_password`, update `config.toml` (0600), reload. |
+| **TLS private key** | `/etc/landline/tls/privkey.pem` (0600, nginx) | Per certificate lifetime (≤ 90 days with Let's Encrypt) | Renew the certificate, replace key+chain (0600), `nginx -t && systemctl reload nginx`. |
+| **WireGuard/Tailscale keys** | Tunnel host config (0600) | On host decommission or compromise; annual review | Regenerate the keypair, update both peers, `systemctl restart wg-quick@wg0`. |
+
+**Triggers for immediate rotation (any secret):** suspected compromise, operator
+departure, or a lost/retired device. Rotations are recorded in the operations
+log; a rotation is verified by confirming old material no longer authenticates.
 
 ## 9. Open Security Documentation TODOs
 
 - Add incident response workflow and severity model.
-- Add key/token rotation runbook with operational cadence.
-- Add secure default configuration examples per deployment profile.
 - Add security exceptions register template.
+- Add secure default configuration examples per deployment profile (partially
+  covered by `backend/config.example.toml` and the `deploy/` profiles).
 
 ## 10. Change History
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.2.0 | 2026-07-05 | DC0SK | Added §8.2 secrets rotation policy (BL-012, closing the last Phase-0 remainder); expanded §8 storage with the enforced 0600 config check and NFR-SEC-10/12 notes. |
 | 0.1.1 | 2026-06-26 | DC0SK | Migrated to area-coded FR/NFR/TC ids and new doc-tree frontmatter. |
 | 0.1.0 | 2026-05-13 | - | Initial security model and controls document |

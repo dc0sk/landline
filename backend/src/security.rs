@@ -22,6 +22,7 @@ use axum::extract::{ConnectInfo, Request, State};
 use axum::http::{header, Method, StatusCode};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
+use tower_http::catch_panic::{CatchPanicLayer, DefaultResponseForPanic};
 use tower_http::cors::CorsLayer;
 
 /// A per-key token-bucket rate limiter (NFR-SEC-04).
@@ -92,6 +93,14 @@ pub async fn rate_limit(
     } else {
         (StatusCode::TOO_MANY_REQUESTS, "rate limited").into_response()
     }
+}
+
+/// A layer that catches a handler panic and returns a sanitised `500` with no
+/// panic message, stack trace, or internal detail (NFR-SEC-09) — rather than
+/// dropping the connection. Defence in depth alongside the typed error responses.
+#[must_use]
+pub fn catch_panic_layer() -> CatchPanicLayer<DefaultResponseForPanic> {
+    CatchPanicLayer::new()
 }
 
 /// Build the CORS layer from the configured origin allowlist (NFR-SEC-06).

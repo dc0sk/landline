@@ -8,6 +8,8 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use axum::body::Body;
 use axum::extract::ConnectInfo;
 use axum::http::{Request, StatusCode};
+use axum::routing::get;
+use axum::Router;
 use landline_backend::app;
 use landline_backend::config::{Config, SecurityConfig};
 use tower::ServiceExt;
@@ -115,6 +117,32 @@ async fn cors_allows_configured_origin_only() {
         .headers()
         .get("access-control-allow-origin")
         .is_none());
+}
+
+#[tokio::test]
+async fn panics_return_a_sanitised_500() {
+    // NFR-SEC-09: a handler panic must not leak its message; the catch-panic
+    // layer returns a generic 500.
+    async fn boom() -> &'static str {
+        panic!("internal secret detail /etc/shadow");
+    }
+    let app = Router::new()
+        .route("/boom", get(boom))
+        .layer(landline_backend::security::catch_panic_layer());
+
+    let response = app
+        .oneshot(Request::builder().uri("/boom").body(Body::empty()).unwrap())
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+    let bytes = axum::body::to_bytes(response.into_body(), 64 * 1024)
+        .await
+        .unwrap();
+    let body = String::from_utf8_lossy(&bytes);
+    assert!(
+        !body.contains("secret detail"),
+        "panic message leaked: {body}"
+    );
 }
 
 #[tokio::test]

@@ -1,7 +1,7 @@
 ---
 title: Product Backlog
 status: Draft
-version: 0.5.18
+version: 0.5.19
 updated: 2026-07-05
 authors:
   - Simon Keimer (DC0SK)
@@ -94,7 +94,7 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 | ID | Title | Priority | Phase | Est. | Deps | Req IDs | Test IDs | Status |
 |---|---|---|---|---|---|---|---|---|
 | BL-020 | Initialize Rust workspace: Tokio + Axum + Tower | Must | 1 | S | BL-011 | NFR-MAINT-01 | — | Done |
-| BL-021 | Implement auth middleware (JWT, expiry, role claims) | Must | 1 | M | BL-020, BL-012 | FR-AUTH-01–FR-AUTH-05, NFR-SEC-01–NFR-SEC-02 | TC-AUTH-01–TC-AUTH-05, TC-SEC-01–TC-SEC-02 | In Progress |
+| BL-021 | Implement auth middleware (JWT, expiry, role claims) | Must | 1 | M | BL-020, BL-012 | FR-AUTH-01–FR-AUTH-05, NFR-SEC-01–NFR-SEC-02 | TC-AUTH-01–TC-AUTH-05, TC-SEC-01–TC-SEC-02 | Done |
 | BL-022 | Implement rate limiting and frame/size limits | Must | 1 | S | BL-021 | NFR-SEC-04–NFR-SEC-05 | TC-SEC-04–TC-SEC-05 | Done |
 | BL-023 | Implement CORS origin policy | Must | 1 | S | BL-021 | NFR-SEC-06 | TC-SEC-06 | Done |
 | BL-024 | Implement audit log subsystem | Must | 1 | M | BL-020 | FR-AUDIT-01–FR-AUDIT-04 | TC-AUDIT-01–TC-AUDIT-02 | Done |
@@ -105,7 +105,7 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 | BL-029 | Implement S-meter streaming | Should | 1 | S | BL-025 | FR-RIG-06 | TC-RIG-06 | In Progress |
 | BL-030 | Implement rig access mutex for concurrent clients | Must | 1 | S | BL-025 | FR-RIG-10 | TC-RIG-09 | Done |
 | BL-031 | Implement rigctld reconnect/circuit-breaker | Should | 1 | M | BL-025 | NFR-REL-02 | TC-REL-02 | Done |
-| BL-032 | Structured tracing/logging integration | Must | 1 | S | BL-020 | NFR-SEC-09, NFR-SEC-12 | TC-SEC-09–TC-SEC-10 | In Progress |
+| BL-032 | Structured tracing/logging integration | Must | 1 | S | BL-020 | NFR-SEC-09, NFR-SEC-12 | TC-SEC-09–TC-SEC-10 | Done |
 | BL-033 | Implement Raspberry Pi GPIO control API for at least 5 digital pins | Must | 1 | M | BL-020, BL-021 | FR-GPIO-01, NFR-SEC-16 | TC-GPIO-01, TC-SEC-15 | Done |
 
 **Note — BL-094 (container decision):** In Progress. The container artifacts (Dockerfile, compose) and a decision-record skeleton with the acceptance-threshold table are in `deploy/container/`; the accept/defer decision is deferred pending the Pi HIL benchmark (BL-092 device passthrough, BL-093 latency).
@@ -121,6 +121,8 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 **Note — BL-029:** In Progress. The S-meter read path is done (`GET /api/rig/smeter`, Observer+, FR-RIG-06 display). Continuous streaming at a configured cadence (TC-RIG-06) rides the Phase-2 WebSocket telemetry channel (ADR-02/ARC-06) alongside the spectrum stream, so it lands in Phase 2.
 
 **Note — BL-033:** Done. The ARC-08 GPIO controller enforces the pin allowlist and safe startup states (NFR-SEC-16) with Operator-gated, audited `/api/gpio/{pin}` endpoints, verified in-memory (TC-SEC-15). The Raspberry Pi sysfs/gpiod hardware backend is a thin deployment-time adapter; TC-GPIO-01 is a hardware-in-the-loop System test.
+
+**Note — security remainders closed:** BL-081 (config now rejects group/world-accessible files, 0600 enforced on Unix — NFR-SEC-03), BL-032 (global panic sanitisation via `catch_panic_layer` completes NFR-SEC-09 alongside the typed sanitised errors), and BL-100/101 (nginx TLS reverse-proxy config in `deploy/nginx/` delivers NFR-SEC-01/TC-SEC-01) are Done. With TLS delivered by the proxy, BL-021 (auth middleware) is now Done. The last open Phase-0 remainder is BL-012 (secrets *rotation* policy).
 
 **Note — BL-024:** Done. The ARC-07 audit subsystem (SHA-256 hash-chained tamper-evident events, durable append file, Admin `GET /api/audit`) logs auth failures (FR-AUDIT-04 / TC-AUDIT-02) and rig state-changes via the control handlers (FR-AUDIT-01 / TC-AUDIT-01, verified). FR-AUDIT-03 30-day retention (TC-AUDIT-03) is enforced by deployment log rotation.
 
@@ -187,7 +189,7 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 | ID | Title | Priority | Phase | Est. | Deps | Req IDs | Test IDs | Status |
 |---|---|---|---|---|---|---|---|---|
 | BL-080 | Write systemd service unit (start/stop/restart, resource limits) | Must | 1 | S | BL-020 | NFR-DEPLOY-02 | TC-DEPLOY-03 | Done |
-| BL-081 | Configure TOML config file with defaults | Must | 1 | S | BL-020 | NFR-DEPLOY-04 | — | In Progress |
+| BL-081 | Configure TOML config file with defaults | Must | 1 | S | BL-020 | NFR-DEPLOY-04 | — | Done |
 | BL-082 | Document rollback procedure for native deployment | Must | 4 | S | BL-080 | NFR-DEPLOY-05 | TC-DEPLOY-06 | Proposed |
 | BL-083 | Cross-compile release binary for aarch64-unknown-linux-gnu | Must | 1 | S | BL-020 | NFR-DEPLOY-01 | TC-DEPLOY-01–TC-DEPLOY-02 | Done |
 
@@ -210,8 +212,8 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 
 | ID | Title | Priority | Phase | Est. | Deps | Req IDs | Test IDs | Status |
 |---|---|---|---|---|---|---|---|---|
-| BL-100 | Production TLS setup (Let's Encrypt or self-signed + nginx reverse proxy) | Must | 4 | M | BL-080 | NFR-SEC-01 | TC-SEC-01 | Proposed |
-| BL-101 | Write nginx reverse proxy config (TLS termination, WS proxy headers) | Must | 4 | S | BL-100 | NFR-SEC-01 | TC-SEC-01 | Proposed |
+| BL-100 | Production TLS setup (Let's Encrypt or self-signed + nginx reverse proxy) | Must | 4 | M | BL-080 | NFR-SEC-01 | TC-SEC-01 | Done |
+| BL-101 | Write nginx reverse proxy config (TLS termination, WS proxy headers) | Must | 4 | S | BL-100 | NFR-SEC-01 | TC-SEC-01 | Done |
 | BL-102 | Soak test: 24 h continuous operation on Pi 4 | Must | 4 | L | EP-07 | NFR-REL-03 | TC-REL-03 | Proposed |
 | BL-103 | Pi 4 load test: 3 clients, full features; CPU < 50 % | Must | 4 | M | EP-07 | NFR-PERF-04 | TC-PERF-04 | Proposed |
 | BL-104 | Final documentation alignment (all FR/NFR IDs traced) | Must | 4 | M | All | All FR/NFR | All TC | Proposed |
@@ -258,6 +260,7 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.5.19 | 2026-07-05 | DC0SK | Closed security remainders + TLS: BL-081 (0600 config check), BL-032 (panic sanitisation/NFR-SEC-09), BL-100/101 (nginx TLS proxy/NFR-SEC-01), BL-021 (auth) → Done. Deferral TC-SEC-01 now met by config. |
 | 0.5.18 | 2026-07-05 | DC0SK | Split-host (BL-110–114) → Done; container artifacts BL-090/091 → Done, BL-094 In Progress (decision pending Pi HIL). Deployment breadth artifacts landed. |
 | 0.5.17 | 2026-07-05 | DC0SK | Phase 3 start: audio software core (ARC-05 jitter buffer + codec seam + config) → BL-076/077 In Progress (FR-AUD-05/06). Native/HIL audio parts remain. |
 | 0.5.16 | 2026-07-05 | DC0SK | BL-062 (audio device selector) + BL-061 (touch optimisation) → Done; BL-060 (browser matrix) → In Progress (software done; on-device matrix is HIL). Phase 2 development-complete. |

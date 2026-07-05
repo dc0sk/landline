@@ -3,7 +3,8 @@
 # Install:
 #   sudo useradd --system --no-create-home --shell /usr/sbin/nologin landline
 #   sudo install -Dm755 target/aarch64-unknown-linux-gnu/release/landline /usr/local/bin/landline
-#   sudo install -Dm640 -o landline -g landline backend/config.example.toml /etc/landline/config.toml
+#   sudo install -Dm600 -o landline -g landline backend/config.example.toml /etc/landline/config.toml
+#   # (0600 — the backend rejects a group/world-accessible config, NFR-SEC-03)
 #   sudo cp deploy/systemd/landline.service /etc/systemd/system/
 #   sudo systemctl daemon-reload && sudo systemctl enable --now landline
 #

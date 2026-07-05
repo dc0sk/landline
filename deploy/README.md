@@ -11,6 +11,10 @@ reverse proxy is Phase 4 (BL-100–101).
 | Native (systemd) — reference | [`systemd/landline.service`](systemd/landline.service) | supported |
 | Container (evaluated) | [`container/`](container/) | evaluated; supported pending Pi HIL |
 | Split-host (WireGuard/Tailscale) | [`split-host/`](split-host/) | documented profile |
+| TLS reverse proxy (nginx) | [`nginx/`](nginx/) | production TLS/WSS (NFR-SEC-01) |
+
+> **Config permissions (NFR-SEC-03):** the backend **rejects a `config.toml` that
+> is group- or world-accessible** — install it `0600`, owned by the service user.
 
 ## Native (systemd)
 

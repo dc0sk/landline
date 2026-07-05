@@ -1,7 +1,7 @@
 ---
 title: Action List
 status: Draft
-version: "0.26"
+version: "0.27"
 updated: 2026-07-05
 authors:
   - Simon Keimer (DC0SK)
@@ -71,8 +71,13 @@ License notice: This project is licensed under AGPL-3.0-only. See the top-level 
   browser-matrix**: the audio device ends (CPAL capture/playback, libopus, browser Web Audio,
   mic TX) + latency (A31 remainder, A32), soak/load (A37), container passthrough/decision
   (A33 remainder), and the browser/Pi test execution that fills the final trace records (BL-104).
-- Open Phase 0 remainder: secrets *rotation* policy (BL-012) is deferred to before production
-  release — tracked below under Phase 4 preparation.
+- **Feature-complete in software (2026-07-05).** The full audio pipeline (RX + TX transport,
+  jitter buffer, PCM + feature-gated Opus, browser playback + mic capture), the spectrum/
+  waterfall with palette selection (FR-SPEC-04), passband tuning (FR-RIG-07), and all Phase-4
+  software (TLS proxy, ops docs, rotation policy) are done and tested (≈75 Rust + 38 frontend
+  tests, all gates green). The remaining Phase-0 rotation item (BL-012) is **also done**
+  (security.md §8.2). **Everything still open is hardware-in-the-loop or browser-matrix** —
+  ready for rig/Pi/device testing.
 
 ---
 
@@ -151,6 +156,7 @@ updated). In addition:
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.27 | 2026-07-05 | DC0SK | Could-feature: passband tuning UI (FR-RIG-07) — passband input on the mode control, sent via the existing validated setMode. All Could software features now covered. |
 | 0.26 | 2026-07-05 | DC0SK | Could-feature: waterfall palette selection (BL-055, FR-SPEC-04) — hot/grayscale/ice + selector, tested. |
 | 0.25 | 2026-07-05 | DC0SK | Opus codec (BL-076 Done): feature-gated libopus OpusCodec (FR-AUD-05); default C-free, CI tests --features opus. 75 Rust tests with feature. |
 | 0.24 | 2026-07-05 | DC0SK | Mic TX path: backend Operator-gated TX receive (AudioSink seam); frontend MicCapture + encode + PTT-gated send. Software audio path (RX+TX transport) complete. |

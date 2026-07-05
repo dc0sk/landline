@@ -18,8 +18,8 @@ refresh_ttl_secs = 86400  # 24 hours
 
 # User accounts. `password_hash` is an argon2 PHC string — never a plaintext
 # password (NFR-SEC-12). Generate one with:
-#   cargo run -p landline-backend --bin landline-hash -- <password>   # (helper TBD)
-# or via the `landline_backend::auth::hash_password` API. Roles: admin | operator | observer.
+#   cargo run -p landline-backend --bin landline-hash -- <password>
+# Roles: admin | operator | observer.
 # [[users]]
 # name = "operator"
 # role = "operator"

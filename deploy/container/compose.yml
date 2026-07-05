@@ -1,0 +1,29 @@
+# landline backend — container profile (A33, NFR-DEPLOY-03).
+# Security posture per NFR-SEC-10: non-root, read-only root filesystem, dropped
+# capabilities, no privilege escalation. Writable state is confined to a named
+# volume (audit log) and a tmpfs (/tmp).
+services:
+  landline:
+    build:
+      context: ../..
+      dockerfile: deploy/container/Dockerfile
+    image: landline-backend:latest
+    read_only: true # read-only root filesystem (NFR-SEC-10)
+    user: "10001:10001" # non-root (NFR-SEC-10)
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+    volumes:
+      - ./config.toml:/etc/landline/config.toml:ro
+      - landline-state:/var/lib/landline # durable audit log
+    # Publish ONLY on the host's private tunnel interface, never 0.0.0.0
+    # (NFR-SEC-13). Replace 10.10.0.1 with the WireGuard/Tailscale address.
+    ports:
+      - "10.10.0.1:8443:8443"
+    restart: on-failure
+
+volumes:
+  landline-state:

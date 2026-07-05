@@ -1,7 +1,7 @@
 ---
 title: Action List
 status: Draft
-version: "0.18"
+version: "0.19"
 updated: 2026-07-05
 authors:
   - Simon Keimer (DC0SK)
@@ -55,8 +55,11 @@ License notice: This project is licensed under AGPL-3.0-only. See the top-level 
   record: software-complete, formal gate pending browser-matrix + Pi HIL. **Phase 3 has started
   (A31, in progress):** the ARC-05 audio software core — jitter buffer (loss concealment) +
   codec seam + config — is done and unit-tested, C-free cross-build preserved. The native/HIL
-  parts (libopus, CPAL, WS audio transport, browser Web Audio) are the remainder. Phase 3 also
-  covers container evaluation (A33) and split-host (A34) per roadmap §7.
+  parts (libopus, CPAL, WS audio transport, browser Web Audio) are the remainder. **A34
+  (split-host) is done** and **A33 (container) artifacts are done** (hardened Dockerfile +
+  compose + decision-record skeleton; device-passthrough/latency + the accept/defer decision are
+  Pi HIL). **Next: A32** — audio latency measurement (Pi HIL) — and the Phase-3 audio pipeline
+  device ends, all hardware-in-the-loop.
 - Open Phase 0 remainder: secrets *rotation* policy (BL-012) is deferred to before production
   release — tracked below under Phase 4 preparation.
 
@@ -110,8 +113,8 @@ Frontend bootstrap can start in parallel once the auth contract (A6) is stable.
 
 - [ ] A31. Bidirectional Opus audio pipeline over WSS with per-session auth — BL-070–BL-077 · FR-AUD-01–FR-AUD-06, NFR-SEC-01 · TC-AUD-01–TC-AUD-06 — *in progress — software core done: ARC-05 `audio` module — `JitterBuffer` (reorder + graceful loss concealment, FR-AUD-06) + `Codec` seam with `PcmCodec` (FR-AUD-05) + `[audio]` config. 5 unit tests; aarch64 cross-build stays C-free. Remaining (native/HIL): libopus `OpusCodec` (feature-gated), CPAL capture/playback on the Pi, the WS binary audio transport + per-session auth, and browser Web Audio playback/mic — all validated hardware-in-the-loop*
 - [ ] A32. Measure/document end-to-end audio latency on Pi 4 — BL-078 · NFR-PERF-02 · TC-PERF-02
-- [ ] A33. Container evaluation (Dockerfile, compose, device passthrough, latency benchmark, decision record) — BL-090–BL-095 · NFR-DEPLOY-03, NFR-SEC-10 · TC-DEPLOY-04–TC-DEPLOY-05
-- [ ] A34. Split-host topology + WireGuard/Tailscale profiles, SSH fallback docs, frontend runtime endpoint config — BL-110–BL-114 · FR-HOST-01–FR-HOST-04, NFR-SEC-13–NFR-SEC-15 · TC-HOST-01–TC-HOST-03, TC-SEC-12–TC-SEC-14
+- [ ] A33. Container evaluation (Dockerfile, compose, device passthrough, latency benchmark, decision record) — BL-090–BL-095 · NFR-DEPLOY-03, NFR-SEC-10 · TC-DEPLOY-04–TC-DEPLOY-05 — *in progress — artifacts done: hardened `deploy/container/Dockerfile` (multi-stage, non-root, ca-certs) + `compose.yml` (read-only rootfs, cap_drop ALL, no-new-privileges, private-tunnel publish — NFR-SEC-10) + decision-record skeleton; hadolint CI job. Device-passthrough eval, latency benchmark, and accept/defer decision (BL-092/093/094) are Pi HIL*
+- [x] A34. Split-host topology + WireGuard/Tailscale profiles, SSH fallback docs, frontend runtime endpoint config — BL-110–BL-114 · FR-HOST-01–FR-HOST-04, NFR-SEC-13–NFR-SEC-15 · TC-HOST-01–TC-HOST-03, TC-SEC-12–TC-SEC-14 — *done: `deploy/split-host/` — topology + tunnel-interface bind (NFR-SEC-13), WireGuard primary + config templates, Tailscale alternative, SSH fallback-only (NFR-SEC-15), verification checklist. Frontend runtime endpoint config (FR-HOST-04, BL-113) already shipped via `LANDLINE_API_BASE`. On-network verification (TC-HOST/TC-SEC-12–14) is HIL*
 
 ## 6. Milestone: Phase 4 — release candidate and operations (forward-looking)
 
@@ -137,6 +140,7 @@ updated). In addition:
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.19 | 2026-07-05 | DC0SK | A34 (split-host: WireGuard/Tailscale/SSH profiles + tunnel-bind) done; A33 (container Dockerfile/compose + decision skeleton + hadolint CI) artifacts done. Remaining Phase-3 audio + container eval are Pi HIL. |
 | 0.18 | 2026-07-05 | DC0SK | Phase 3 started (A31 in progress): ARC-05 audio software core — jitter buffer (loss concealment) + codec seam + config, C-free. 67 Rust tests. Native/HIL audio parts remain. |
 | 0.17 | 2026-07-05 | DC0SK | Phase 2 exit review: reconciled roadmap §6 exit criteria + test-strategy §6b execution record. Phase 2 development-complete; gate pending browser-matrix + Pi HIL. Next milestone Phase 3 (audio). |
 | 0.16 | 2026-07-05 | DC0SK | Marked A30 done: audio device selector (MediaDevices) + touch refinements. Phase 2 development-complete; next is the Phase 2 exit review. |

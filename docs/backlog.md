@@ -1,7 +1,7 @@
 ---
 title: Product Backlog
 status: Draft
-version: 0.5.17
+version: 0.5.18
 updated: 2026-07-05
 authors:
   - Simon Keimer (DC0SK)
@@ -108,6 +108,10 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 | BL-032 | Structured tracing/logging integration | Must | 1 | S | BL-020 | NFR-SEC-09, NFR-SEC-12 | TC-SEC-09–TC-SEC-10 | In Progress |
 | BL-033 | Implement Raspberry Pi GPIO control API for at least 5 digital pins | Must | 1 | M | BL-020, BL-021 | FR-GPIO-01, NFR-SEC-16 | TC-GPIO-01, TC-SEC-15 | Done |
 
+**Note — BL-094 (container decision):** In Progress. The container artifacts (Dockerfile, compose) and a decision-record skeleton with the acceptance-threshold table are in `deploy/container/`; the accept/defer decision is deferred pending the Pi HIL benchmark (BL-092 device passthrough, BL-093 latency).
+
+**Note — split-host (A34):** BL-110–114 Done as documentation/config artifacts in `deploy/split-host/` (topology, WireGuard templates, Tailscale ACL, SSH fallback, tunnel-interface bind). On-network verification (TC-HOST-01/02/03, TC-SEC-12/13/14, TC-DEPLOY-07) is hardware-in-the-loop. BL-113 (FR-HOST-04) is fully done in code (`LANDLINE_API_BASE`).
+
 **Note — audio software core (A31):** The ARC-05 `audio` module lands the pure, testable audio parts: a reordering `JitterBuffer` with graceful loss concealment (FR-AUD-06, so BL-077 In Progress) and a `Codec` seam + `PcmCodec` with `[audio]` bitrate config (FR-AUD-05, so BL-076 In Progress). The device ends and codec remain: libopus `OpusCodec` (feature-gated native adapter, keeps the default aarch64 cross-build C-free), CPAL capture/playback (BL-070/074), the WS binary audio transport + per-session auth (BL-071/075), and browser Web Audio (BL-072/073) — all validated hardware-in-the-loop.
 
 **Note — BL-060:** In Progress. The software targets are met — responsive layout, Canvas 2D waterfall (no WebGL), and MediaDevices-based device selection all implemented and unit-tested. Executing the full browser matrix (TC-COMPAT-01–07, TC-AUD-03/04 on Firefox/Chromium/Edge desktop + iOS Safari + Chrome Android) needs real devices and is the manual/HIL remainder.
@@ -193,11 +197,11 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 
 | ID | Title | Priority | Phase | Est. | Deps | Req IDs | Test IDs | Status |
 |---|---|---|---|---|---|---|---|---|
-| BL-090 | Write Dockerfile (non-root, read-only rootfs, minimal base) | Should | 3 | M | BL-083 | NFR-DEPLOY-03, NFR-SEC-10 | TC-DEPLOY-04–TC-DEPLOY-05 | Proposed |
-| BL-091 | Write compose.yml for local orchestration | Should | 3 | S | BL-090 | NFR-DEPLOY-03 | TC-DEPLOY-04 | Proposed |
+| BL-090 | Write Dockerfile (non-root, read-only rootfs, minimal base) | Should | 3 | M | BL-083 | NFR-DEPLOY-03, NFR-SEC-10 | TC-DEPLOY-04–TC-DEPLOY-05 | Done |
+| BL-091 | Write compose.yml for local orchestration | Should | 3 | S | BL-090 | NFR-DEPLOY-03 | TC-DEPLOY-04 | Done |
 | BL-092 | Evaluate ALSA/PipeWire device passthrough in container | Should | 3 | M | BL-090 | NFR-DEPLOY-03 | TC-DEPLOY-04 | Proposed |
 | BL-093 | Benchmark audio latency: native vs container on Pi 4 | Should | 3 | M | BL-092, BL-078 | NFR-DEPLOY-03, NFR-PERF-02 | TC-PERF-02, TC-DEPLOY-04 | Proposed |
-| BL-094 | Write container deployment decision record in docs/deployment.md | Should | 3 | S | BL-093 | NFR-DEPLOY-03 | — | Proposed |
+| BL-094 | Write container deployment decision record in docs/deployment.md | Should | 3 | S | BL-093 | NFR-DEPLOY-03 | — | In Progress |
 | BL-095 | Validate secret injection in container (no secrets in image layers) | Should | 3 | S | BL-090 | NFR-SEC-03, NFR-SEC-10 | TC-SEC-03, TC-DEPLOY-05 | Proposed |
 
 ---
@@ -220,11 +224,11 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 
 | ID | Title | Priority | Phase | Est. | Deps | Req IDs | Test IDs | Status |
 |---|---|---|---|---|---|---|---|---|
-| BL-110 | Define split-host network topology (frontend host + backend host) | Must | 3 | S | BL-010 | FR-HOST-01–FR-HOST-02, NFR-DEPLOY-07 | TC-HOST-01, TC-DEPLOY-07 | Proposed |
-| BL-111 | Add WireGuard profile for frontend-host to backend-host secure connectivity | Must | 3 | M | BL-110 | FR-HOST-03, NFR-SEC-13–NFR-SEC-14, NFR-DEPLOY-08 | TC-HOST-03, TC-SEC-12–TC-SEC-13, TC-DEPLOY-07 | Proposed |
-| BL-112 | Add Tailscale profile as operator-friendly WireGuard-based alternative | Should | 3 | S | BL-110 | FR-HOST-03, NFR-SEC-14, NFR-DEPLOY-08 | TC-HOST-03, TC-SEC-13, TC-DEPLOY-07 | Proposed |
-| BL-113 | Implement frontend runtime configuration for remote API/WSS endpoints | Must | 3 | S | BL-040 | FR-HOST-04 | TC-HOST-02 | Proposed |
-| BL-114 | Document SSH tunnel profile as non-default fallback only | Should | 3 | S | BL-110 | NFR-SEC-15, NFR-DEPLOY-08 | TC-SEC-14 | Proposed |
+| BL-110 | Define split-host network topology (frontend host + backend host) | Must | 3 | S | BL-010 | FR-HOST-01–FR-HOST-02, NFR-DEPLOY-07 | TC-HOST-01, TC-DEPLOY-07 | Done |
+| BL-111 | Add WireGuard profile for frontend-host to backend-host secure connectivity | Must | 3 | M | BL-110 | FR-HOST-03, NFR-SEC-13–NFR-SEC-14, NFR-DEPLOY-08 | TC-HOST-03, TC-SEC-12–TC-SEC-13, TC-DEPLOY-07 | Done |
+| BL-112 | Add Tailscale profile as operator-friendly WireGuard-based alternative | Should | 3 | S | BL-110 | FR-HOST-03, NFR-SEC-14, NFR-DEPLOY-08 | TC-HOST-03, TC-SEC-13, TC-DEPLOY-07 | Done |
+| BL-113 | Implement frontend runtime configuration for remote API/WSS endpoints | Must | 3 | S | BL-040 | FR-HOST-04 | TC-HOST-02 | Done |
+| BL-114 | Document SSH tunnel profile as non-default fallback only | Should | 3 | S | BL-110 | NFR-SEC-15, NFR-DEPLOY-08 | TC-SEC-14 | Done |
 
 ---
 
@@ -254,6 +258,7 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.5.18 | 2026-07-05 | DC0SK | Split-host (BL-110–114) → Done; container artifacts BL-090/091 → Done, BL-094 In Progress (decision pending Pi HIL). Deployment breadth artifacts landed. |
 | 0.5.17 | 2026-07-05 | DC0SK | Phase 3 start: audio software core (ARC-05 jitter buffer + codec seam + config) → BL-076/077 In Progress (FR-AUD-05/06). Native/HIL audio parts remain. |
 | 0.5.16 | 2026-07-05 | DC0SK | BL-062 (audio device selector) + BL-061 (touch optimisation) → Done; BL-060 (browser matrix) → In Progress (software done; on-device matrix is HIL). Phase 2 development-complete. |
 | 0.5.15 | 2026-07-05 | DC0SK | BL-052 (Canvas 2D waterfall) → Done; BL-053 (iOS Safari no-WebGL) → In Progress (structurally 2D-only; on-device verify is browser-matrix). 27 frontend tests. |

@@ -1,0 +1,15 @@
+# WireGuard config for the FRONTEND host — /etc/wireguard/wg0.conf
+# Fill in the private key (this host) and the peer's public key (backend host).
+# AllowedIPs is scoped to the tunnel subnet so only backend traffic is routed
+# over the tunnel (no full-tunnel default route).
+
+[Interface]
+Address = 10.10.0.2/24
+PrivateKey = <frontend-host-private-key>
+
+[Peer]
+# The backend host (Raspberry Pi).
+PublicKey = <backend-host-public-key>
+Endpoint = <backend-host-public-address>:51820
+AllowedIPs = 10.10.0.1/32
+PersistentKeepalive = 25

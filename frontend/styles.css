@@ -55,14 +55,25 @@ label {
 input,
 select,
 button {
-  font: inherit;
-  min-height: 44px; /* touch target (NFR-COMPAT-06) */
+  /* 16px avoids iOS Safari's zoom-on-focus; 44px is the min touch target
+     (NFR-COMPAT-06); manipulation removes the 300ms tap delay. */
+  font-size: 16px;
+  min-height: 44px;
   padding: 0.4rem 0.6rem;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--bg);
   color: var(--fg);
   max-width: 100%;
+  touch-action: manipulation;
+}
+
+/* On narrow screens, form controls span the full width for easy touch. */
+@media (max-width: 699px) {
+  input,
+  select {
+    width: 100%;
+  }
 }
 
 button {

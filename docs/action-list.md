@@ -1,7 +1,7 @@
 ---
 title: Action List
 status: Draft
-version: "0.15"
+version: "0.16"
 updated: 2026-07-05
 authors:
   - Simon Keimer (DC0SK)
@@ -48,8 +48,10 @@ License notice: This project is licensed under AGPL-3.0-only. See the top-level 
   path — FFT pipeline + authenticated WebSocket transport streaming spectrum frames — is done
   and tested (62 Rust tests), which also lands the Phase-1-deferred WS security items
   (TC-AUTH-01 WS auth, TC-SEC-05 WS frame limit). A29 added the browser **Canvas 2D waterfall**
-  (no WebGL) consuming that stream over the reconnecting socket. **Next: A30** — full browser
-  matrix validation, touch optimisation, and the audio device selector UI (bridges into Phase 3).
+  (no WebGL) consuming that stream over the reconnecting socket. A30 added the audio device
+  selector (MediaDevices) + touch refinements — **Phase 2 is development-complete** (A28–A30;
+  29 frontend + 62 Rust tests). **Next: the Phase 2 exit review** (roadmap §6) — reconcile exit
+  criteria against the automated suite vs. the browser-matrix HIL remainder, mirroring A27.
 - Open Phase 0 remainder: secrets *rotation* policy (BL-012) is deferred to before production
   release — tracked below under Phase 4 preparation.
 
@@ -97,7 +99,7 @@ Frontend bootstrap can start in parallel once the auth contract (A6) is stable.
 
 - [x] A28. FFT pipeline + spectrum WebSocket stream at configurable rate — BL-050, BL-051, BL-054 · FR-SPEC-01–FR-SPEC-02 · TC-SPEC-01–TC-SPEC-02 — *done: ARC-06 `spectrum` module (rustfft, Hann window, dB bins, `SampleSource` seam + synthetic source) + ARC-01 `ws` module — authenticated WebSocket (first-message JWT auth, TC-AUTH-01; frame-size caps, NFR-SEC-05/TC-SEC-05) streaming spectrum frames at the configured 1–10 Hz rate. 4 FFT unit + 3 WS integration tests (real server + client). Real audio source is Phase 3; the Canvas renderer is A29*
 - [x] A29. Canvas 2D waterfall renderer; verify on iOS Safari (no WebGL) — BL-052, BL-053 · FR-SPEC-03 · TC-SPEC-03–TC-SPEC-04 — *done: ARC-12 `waterfall.ts` — scrolling Canvas 2D waterfall (no WebGL → iOS-Safari-safe), pure normalise/palette/row logic unit-tested; `spectrum-client.ts` wires the reconnecting socket through the auth→subscribe handshake to the renderer. 5 unit tests. On-device iOS-Safari confirmation (TC-SPEC-04) is a browser-matrix run (BL-053)*
-- [ ] A30. Full browser matrix validation, touch optimisation, audio device selector UI — BL-060–BL-062 · NFR-COMPAT-01–NFR-COMPAT-07, FR-AUD-03–FR-AUD-04 · TC-COMPAT-01–TC-COMPAT-07, TC-AUD-03–TC-AUD-04
+- [x] A30. Full browser matrix validation, touch optimisation, audio device selector UI — BL-060–BL-062 · NFR-COMPAT-01–NFR-COMPAT-07, FR-AUD-03–FR-AUD-04 · TC-COMPAT-01–TC-COMPAT-07, TC-AUD-03–TC-AUD-04 — *done (software): `audio-devices.ts` — MediaDevices enumeration (NFR-COMPAT-07) partitioned into input/output selectors with permission-unlock + labelled fallbacks (FR-AUD-03/04); touch refinements (16px font vs iOS zoom, `touch-action: manipulation`, full-width mobile controls, NFR-COMPAT-06). 2 unit tests. Full browser-matrix validation (TC-COMPAT-*, TC-AUD-03/04 on real devices) is the manual/HIL remainder (BL-060)*
 
 ## 5. Milestone: Phase 3 — audio, container evaluation, split-host (forward-looking)
 
@@ -130,6 +132,7 @@ updated). In addition:
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.16 | 2026-07-05 | DC0SK | Marked A30 done: audio device selector (MediaDevices) + touch refinements. Phase 2 development-complete; next is the Phase 2 exit review. |
 | 0.15 | 2026-07-05 | DC0SK | Marked A29 done: ARC-12 Canvas 2D waterfall (no WebGL) + spectrum-client handshake over the reconnecting socket. 27 frontend tests. Next A30 (browser matrix + audio device selector). |
 | 0.14 | 2026-07-05 | DC0SK | Phase 2 started — marked A28 done: ARC-06 FFT pipeline + ARC-01 authenticated WebSocket transport streaming spectrum (also lands deferred WS auth/frame-limit items). 62 Rust tests. Next A29 (Canvas waterfall). |
 | 0.13 | 2026-07-05 | DC0SK | Marked A27 done: Phase 1 exit review — reconciled roadmap §5 exit criteria + test-strategy execution record. Phase 1 development-complete; formal gate pending HIL + Phase-4 TLS. |

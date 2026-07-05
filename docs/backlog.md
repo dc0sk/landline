@@ -1,7 +1,7 @@
 ---
 title: Product Backlog
 status: Draft
-version: 0.5.15
+version: 0.5.16
 updated: 2026-07-05
 authors:
   - Simon Keimer (DC0SK)
@@ -108,6 +108,8 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 | BL-032 | Structured tracing/logging integration | Must | 1 | S | BL-020 | NFR-SEC-09, NFR-SEC-12 | TC-SEC-09–TC-SEC-10 | In Progress |
 | BL-033 | Implement Raspberry Pi GPIO control API for at least 5 digital pins | Must | 1 | M | BL-020, BL-021 | FR-GPIO-01, NFR-SEC-16 | TC-GPIO-01, TC-SEC-15 | Done |
 
+**Note — BL-060:** In Progress. The software targets are met — responsive layout, Canvas 2D waterfall (no WebGL), and MediaDevices-based device selection all implemented and unit-tested. Executing the full browser matrix (TC-COMPAT-01–07, TC-AUD-03/04 on Firefox/Chromium/Edge desktop + iOS Safari + Chrome Android) needs real devices and is the manual/HIL remainder.
+
 **Note — BL-053:** In Progress. The waterfall renderer uses only the Canvas 2D context + `ImageData` — no WebGL — so it is structurally iOS-Safari-compatible (FR-SPEC-03). On-device confirmation on iOS Safari (TC-SPEC-04) is part of the browser-matrix run (BL-060), which needs real devices.
 
 **Note — BL-029:** In Progress. The S-meter read path is done (`GET /api/rig/smeter`, Observer+, FR-RIG-06 display). Continuous streaming at a configured cadence (TC-RIG-06) rides the Phase-2 WebSocket telemetry channel (ADR-02/ARC-06) alongside the spectrum stream, so it lands in Phase 2.
@@ -152,9 +154,9 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 
 | ID | Title | Priority | Phase | Est. | Deps | Req IDs | Test IDs | Status |
 |---|---|---|---|---|---|---|---|---|
-| BL-060 | Validate full browser matrix (see TC-COMPAT-01–TC-COMPAT-07) | Must | 2 | M | BL-047, BL-052 | NFR-COMPAT-01–NFR-COMPAT-07 | TC-COMPAT-01–TC-COMPAT-07 | Proposed |
-| BL-061 | Touch optimisation: tuning slider, PTT button sizing | Must | 2 | S | BL-047 | NFR-COMPAT-06 | TC-COMPAT-04–TC-COMPAT-07 | Proposed |
-| BL-062 | Implement audio device selector UI (MediaDevices API) | Must | 2 | S | BL-040 | FR-AUD-03–FR-AUD-04, NFR-COMPAT-07 | TC-AUD-03–TC-AUD-04 | Proposed |
+| BL-060 | Validate full browser matrix (see TC-COMPAT-01–TC-COMPAT-07) | Must | 2 | M | BL-047, BL-052 | NFR-COMPAT-01–NFR-COMPAT-07 | TC-COMPAT-01–TC-COMPAT-07 | In Progress |
+| BL-061 | Touch optimisation: tuning slider, PTT button sizing | Must | 2 | S | BL-047 | NFR-COMPAT-06 | TC-COMPAT-04–TC-COMPAT-07 | Done |
+| BL-062 | Implement audio device selector UI (MediaDevices API) | Must | 2 | S | BL-040 | FR-AUD-03–FR-AUD-04, NFR-COMPAT-07 | TC-AUD-03–TC-AUD-04 | Done |
 
 ---
 
@@ -250,6 +252,7 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.5.16 | 2026-07-05 | DC0SK | BL-062 (audio device selector) + BL-061 (touch optimisation) → Done; BL-060 (browser matrix) → In Progress (software done; on-device matrix is HIL). Phase 2 development-complete. |
 | 0.5.15 | 2026-07-05 | DC0SK | BL-052 (Canvas 2D waterfall) → Done; BL-053 (iOS Safari no-WebGL) → In Progress (structurally 2D-only; on-device verify is browser-matrix). 27 frontend tests. |
 | 0.5.14 | 2026-07-05 | DC0SK | Phase 2 start: BL-050/051/054 (FFT + spectrum WS stream) → Done; BL-022 (frame/size limits) → Done (WS frame cap now enforced on the ARC-01 WS transport). |
 | 0.5.13 | 2026-07-05 | DC0SK | BL-047 (responsive CSS) + BL-080 (systemd unit) → Done. All Phase 1 build actions complete; only the exit review (A27) remains. |

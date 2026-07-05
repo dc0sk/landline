@@ -4,6 +4,7 @@
 // lives in api.ts / session.ts / backoff.ts.
 
 import { ApiClient } from "./api.ts";
+import { loadAudioDevices, type AudioDevice } from "./audio-devices.ts";
 import {
   getFrequency,
   getMode,
@@ -62,6 +63,37 @@ function startTelemetry(): void {
 function stopTelemetry(): void {
   spectrumClient?.stop();
   spectrumClient = null;
+}
+
+function fillDeviceSelect(select: HTMLSelectElement, devices: AudioDevice[]): void {
+  select.replaceChildren();
+  for (const device of devices) {
+    const option = document.createElement("option");
+    option.value = device.deviceId;
+    option.textContent = device.label;
+    select.append(option);
+  }
+}
+
+async function refreshAudioDevices(): Promise<void> {
+  const media = navigator.mediaDevices;
+  if (typeof media?.enumerateDevices !== "function") {
+    byId("audio-note").textContent = "Audio device selection is unavailable in this browser.";
+    return;
+  }
+  // Labels are hidden until microphone permission is granted; requesting it
+  // once unlocks them (FR-AUD-03/04, NFR-COMPAT-07).
+  try {
+    const stream = await media.getUserMedia({ audio: true });
+    for (const track of stream.getTracks()) {
+      track.stop();
+    }
+  } catch {
+    byId("audio-note").textContent = "Microphone permission denied; device names may be hidden.";
+  }
+  const devices = await loadAudioDevices(media);
+  fillDeviceSelect(byId<HTMLSelectElement>("audio-input"), devices.inputs);
+  fillDeviceSelect(byId<HTMLSelectElement>("audio-output"), devices.outputs);
 }
 
 function byId<T extends HTMLElement = HTMLElement>(id: string): T {
@@ -197,6 +229,7 @@ async function handleLogin(event: SubmitEvent): Promise<void> {
   try {
     session.set(await api.login(name, password));
     startTelemetry();
+    void refreshAudioDevices();
     render();
   } catch {
     // Generic message: the server does not reveal why auth failed, and neither

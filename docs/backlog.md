@@ -1,7 +1,7 @@
 ---
 title: Product Backlog
 status: Draft
-version: 0.5.14
+version: 0.5.15
 updated: 2026-07-05
 authors:
   - Simon Keimer (DC0SK)
@@ -108,6 +108,8 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 | BL-032 | Structured tracing/logging integration | Must | 1 | S | BL-020 | NFR-SEC-09, NFR-SEC-12 | TC-SEC-09–TC-SEC-10 | In Progress |
 | BL-033 | Implement Raspberry Pi GPIO control API for at least 5 digital pins | Must | 1 | M | BL-020, BL-021 | FR-GPIO-01, NFR-SEC-16 | TC-GPIO-01, TC-SEC-15 | Done |
 
+**Note — BL-053:** In Progress. The waterfall renderer uses only the Canvas 2D context + `ImageData` — no WebGL — so it is structurally iOS-Safari-compatible (FR-SPEC-03). On-device confirmation on iOS Safari (TC-SPEC-04) is part of the browser-matrix run (BL-060), which needs real devices.
+
 **Note — BL-029:** In Progress. The S-meter read path is done (`GET /api/rig/smeter`, Observer+, FR-RIG-06 display). Continuous streaming at a configured cadence (TC-RIG-06) rides the Phase-2 WebSocket telemetry channel (ADR-02/ARC-06) alongside the spectrum stream, so it lands in Phase 2.
 
 **Note — BL-033:** Done. The ARC-08 GPIO controller enforces the pin allowlist and safe startup states (NFR-SEC-16) with Operator-gated, audited `/api/gpio/{pin}` endpoints, verified in-memory (TC-SEC-15). The Raspberry Pi sysfs/gpiod hardware backend is a thin deployment-time adapter; TC-GPIO-01 is a hardware-in-the-loop System test.
@@ -139,8 +141,8 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 |---|---|---|---|---|---|---|---|---|
 | BL-050 | Implement FFT pipeline (rustfft) on audio capture thread | Must | 2 | M | BL-025 | FR-SPEC-01 | TC-SPEC-01 | Done |
 | BL-051 | Stream FFT bin data to clients over WebSocket at configurable rate | Must | 2 | M | BL-050, BL-021 | FR-SPEC-01–FR-SPEC-02 | TC-SPEC-01–TC-SPEC-02 | Done |
-| BL-052 | Implement Canvas 2D waterfall renderer in frontend | Must | 2 | M | BL-040, BL-051 | FR-SPEC-03 | TC-SPEC-03 | Proposed |
-| BL-053 | Verify waterfall rendering on iOS Safari (no WebGL requirement) | Must | 2 | S | BL-052 | FR-SPEC-03 | TC-SPEC-04 | Proposed |
+| BL-052 | Implement Canvas 2D waterfall renderer in frontend | Must | 2 | M | BL-040, BL-051 | FR-SPEC-03 | TC-SPEC-03 | Done |
+| BL-053 | Verify waterfall rendering on iOS Safari (no WebGL requirement) | Must | 2 | S | BL-052 | FR-SPEC-03 | TC-SPEC-04 | In Progress |
 | BL-054 | Add spectrum update rate configuration option | Should | 2 | S | BL-051 | FR-SPEC-02 | TC-SPEC-02 | Done |
 | BL-055 | Add colour palette selector for waterfall | Could | 2 | S | BL-052 | FR-SPEC-04 | — | Proposed |
 
@@ -248,6 +250,7 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.5.15 | 2026-07-05 | DC0SK | BL-052 (Canvas 2D waterfall) → Done; BL-053 (iOS Safari no-WebGL) → In Progress (structurally 2D-only; on-device verify is browser-matrix). 27 frontend tests. |
 | 0.5.14 | 2026-07-05 | DC0SK | Phase 2 start: BL-050/051/054 (FFT + spectrum WS stream) → Done; BL-022 (frame/size limits) → Done (WS frame cap now enforced on the ARC-01 WS transport). |
 | 0.5.13 | 2026-07-05 | DC0SK | BL-047 (responsive CSS) + BL-080 (systemd unit) → Done. All Phase 1 build actions complete; only the exit review (A27) remains. |
 | 0.5.12 | 2026-07-05 | DC0SK | BL-043 (mode selector) + BL-044 (PTT button) + BL-045 (S-meter display) → Done. Full rig-control UI wired; 22 frontend tests. |

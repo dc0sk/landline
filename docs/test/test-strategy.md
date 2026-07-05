@@ -1,8 +1,8 @@
 ---
 title: "Test Strategy & Traceability"
 status: Draft
-version: "0.6"
-updated: 2026-06-26
+version: "0.7"
+updated: 2026-07-05
 authors:
   - Simon Keimer (DC0SK)
 owns: [TC]
@@ -254,8 +254,40 @@ Before any phase exit is approved:
 
 ---
 
+## 6a. Phase 1 execution record (2026-07-05)
+
+Snapshot taken at the Phase 1 exit review (roadmap A27). "Automated" = covered by a
+green test in the CI suite (55 Rust tests + 22 frontend tests). "HIL" = requires
+hardware-in-the-loop (real Raspberry Pi + rigctld + transceiver). "Browser" = manual
+browser-matrix run. "Deferred" = delivered in a later phase.
+
+| Test cases | Level | Status | Evidence / note |
+|---|---|---|---|
+| TC-AUTH-01..05 | Unit + HTTP | **Automated — pass** | `backend/src/auth.rs`, `backend/tests/auth.rs`. TC-AUTH-01 WS variant is Phase 2. |
+| TC-SEC-02, -04, -06, -07, -08, -10, -15 | Unit + HTTP | **Automated — pass** | `auth.rs`, `security.rs`, `rig.rs`, `gpio.rs` + tests. |
+| TC-SEC-01 | Security | **Deferred (Phase 4)** | TLS/WSS enforcement via reverse proxy. |
+| TC-SEC-05, TC-SEC-11 | Security | **Deferred (Phase 2)** | WS frame-size cap / WS replay — land with the WS transport. |
+| TC-SEC-03, TC-SEC-09 | Security | **Partial** | Secret storage / error sanitisation documented + auth/rig paths sanitised; in-app 0600 check (BL-081) and a global sanitiser (BL-032) remain. |
+| TC-RIG-01..05, -07, -08 | Unit + HTTP | **Automated — pass (mock rigctld)** | `backend/tests/control.rs`, `rig.rs`; real-radio is HIL (ASM-05). |
+| TC-RIG-06 | Integration | **Partial** | S-meter read path automated; streaming at interval is Phase 2. |
+| TC-RIG-09 | Integration | **Automated (mechanism)** | Exclusive access via the adapter's async mutex; concurrency HIL. |
+| TC-AUDIT-01, -02 | Integration + Security | **Automated — pass** | `backend/tests/control.rs`, `audit.rs`. |
+| TC-REL-01 | System | **Automated (logic)** | `frontend/src/socket.ts` backoff + reconnect; live TCP-drop run is HIL. |
+| TC-REL-02 | System | **HIL** | Kill/restart rigctld on a real host. |
+| TC-GPIO-01 | System | **HIL** | Real-pin readback; allowlist/safe-state logic verified in-memory (TC-SEC-15). |
+| TC-PERF-01 | Performance | **HIL** | Control-latency measurement on a real LAN deployment. |
+| TC-DEPLOY-01, -03 | System | **Partial / HIL** | aarch64 cross-build verified; systemd unit written; Pi start/stop is HIL. |
+| TC-COMPAT-01..07 | Browser | **Browser (manual)** | Firefox/Chromium/mobile E2E of the built frontend. |
+
+**Disposition:** Phase 1 is software-complete and green under automation; the formal exit gate
+is held pending the HIL, browser-matrix, and Phase-4 TLS items above (no `Fail` results — all
+open items are `Deferred`/`Blocked-on-hardware` with a tracked cause in the backlog).
+
+---
+
 ## 7. Change History
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.7 | 2026-07-05 | DC0SK | Added §6a Phase 1 execution record (A27): automated / HIL / browser / deferred status per test-case group at the Phase 1 exit review. |
 | 0.6 | 2026-06-26 | DC0SK | Migrated to TC ids; added TC-SPEC-05/AUDIT-03/MAINT-01/MAINT-02/DEPLOY-08/DEPLOY-09 to close M/S coverage. |

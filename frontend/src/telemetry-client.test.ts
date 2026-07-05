@@ -9,8 +9,10 @@ class FakeSocket implements WebSocketLike {
   onmessage: ((event: { data: string | ArrayBuffer }) => void) | null = null;
   sent: string[] = [];
   close(): void {}
-  send(data: string): void {
-    this.sent.push(data);
+  send(data: string | ArrayBuffer): void {
+    if (typeof data === "string") {
+      this.sent.push(data);
+    }
   }
 }
 

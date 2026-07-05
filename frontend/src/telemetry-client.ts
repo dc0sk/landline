@@ -56,6 +56,11 @@ export class TelemetryClient {
     this.socket.stop();
   }
 
+  /** Send an encoded mic frame to the server (TX audio, FR-AUD-02). */
+  sendAudio(frame: ArrayBuffer): void {
+    this.socket.send(frame);
+  }
+
   private handle(data: string | ArrayBuffer): void {
     if (data instanceof ArrayBuffer) {
       this.onAudio?.(parseAudioFrame(data));

@@ -18,6 +18,21 @@ export function parseAudioFrame(buffer: ArrayBuffer): AudioFrame {
   return { seq, pcm };
 }
 
+/** Encode a mic frame to the wire format: 8-byte little-endian sequence header
+ *  followed by little-endian 16-bit PCM (the inverse of [`parseAudioFrame`]). */
+export function encodeAudioFrame(seq: number, pcm: Int16Array): ArrayBuffer {
+  const buffer = new ArrayBuffer(8 + pcm.length * 2);
+  const view = new DataView(buffer);
+  view.setBigUint64(0, BigInt(seq), true);
+  pcm.forEach((sample, i) => view.setInt16(8 + i * 2, sample, true));
+  return buffer;
+}
+
+/** Convert a normalised f32 sample to clamped 16-bit PCM. */
+export function floatToPcm16(sample: number): number {
+  return Math.max(-32768, Math.min(32767, Math.round(sample * 32767)));
+}
+
 /** What to play next: decoded samples, or a concealed loss. */
 export type Playout = { readonly kind: "data"; readonly pcm: Int16Array } | { readonly kind: "lost" };
 
@@ -122,5 +137,43 @@ export class AudioPlayer {
     }
     source.start(this.nextStartTime);
     this.nextStartTime += buffer.duration;
+  }
+}
+
+/** Captures microphone audio and emits encoded frames (TX path, FR-AUD-02).
+ *  Browser-only glue over MediaDevices + Web Audio; the frame encoding it uses
+ *  ([`encodeAudioFrame`]) is unit-tested separately. */
+export class MicCapture {
+  private context: AudioContext | null = null;
+  private stream: MediaStream | null = null;
+  private seq = 0;
+
+  async start(
+    deviceId: string | undefined,
+    onFrame: (frame: ArrayBuffer) => void,
+  ): Promise<void> {
+    const audio: MediaTrackConstraints | boolean = deviceId ? { deviceId } : true;
+    this.stream = await navigator.mediaDevices.getUserMedia({ audio });
+    this.context = new AudioContext();
+    const source = this.context.createMediaStreamSource(this.stream);
+    const processor = this.context.createScriptProcessor(1024, 1, 1);
+    processor.onaudioprocess = (event) => {
+      const input = event.inputBuffer.getChannelData(0);
+      const pcm = new Int16Array(input.length);
+      for (let i = 0; i < input.length; i++) {
+        pcm[i] = floatToPcm16(input[i] ?? 0);
+      }
+      onFrame(encodeAudioFrame(this.seq, pcm));
+      this.seq += 1;
+    };
+    source.connect(processor);
+    processor.connect(this.context.destination);
+  }
+
+  stop(): void {
+    this.stream?.getTracks().forEach((track) => track.stop());
+    void this.context?.close();
+    this.context = null;
+    this.stream = null;
   }
 }

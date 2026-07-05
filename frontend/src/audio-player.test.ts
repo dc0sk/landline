@@ -1,6 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { JitterBuffer, parseAudioFrame, type AudioFrame } from "./audio-player.ts";
+import {
+  encodeAudioFrame,
+  floatToPcm16,
+  JitterBuffer,
+  parseAudioFrame,
+  type AudioFrame,
+} from "./audio-player.ts";
 
 function makeBuffer(seq: number, samples: number[]): ArrayBuffer {
   const buffer = new ArrayBuffer(8 + samples.length * 2);
@@ -14,6 +20,21 @@ test("parseAudioFrame reads the sequence header and PCM samples", () => {
   const frame = parseAudioFrame(makeBuffer(42, [0, 100, -100, 32000]));
   assert.equal(frame.seq, 42);
   assert.deepEqual([...frame.pcm], [0, 100, -100, 32000]);
+});
+
+test("encode/parse round-trips a frame", () => {
+  const pcm = Int16Array.of(0, 1, -1, 32000, -32000);
+  const parsed = parseAudioFrame(encodeAudioFrame(9, pcm));
+  assert.equal(parsed.seq, 9);
+  assert.deepEqual([...parsed.pcm], [...pcm]);
+});
+
+test("floatToPcm16 scales and clamps", () => {
+  assert.equal(floatToPcm16(0), 0);
+  assert.equal(floatToPcm16(1), 32767);
+  assert.equal(floatToPcm16(-1), -32767);
+  assert.equal(floatToPcm16(2), 32767); // clamped
+  assert.equal(floatToPcm16(-2), -32768); // clamped
 });
 
 function frame(seq: number): AudioFrame {

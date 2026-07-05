@@ -22,7 +22,7 @@ use axum::response::Response;
 use axum::Extension;
 use serde::{Deserialize, Serialize};
 
-use crate::audio::{f32_to_pcm16, Codec};
+use crate::audio::{f32_to_pcm16, split_frame, AudioSink, Codec};
 use crate::auth::{Auth, Claims, Role};
 use crate::spectrum::{SampleSource, SpectrumAnalyzer};
 
@@ -32,8 +32,10 @@ use crate::spectrum::{SampleSource, SpectrumAnalyzer};
 pub struct AudioRuntime {
     /// Sample source (synthetic today; CPAL capture is the Phase-3 HIL adapter).
     pub source: Arc<dyn SampleSource>,
-    /// Encoder (PCM default; libopus is the native adapter).
+    /// Encoder/decoder (PCM default; libopus is the native adapter).
     pub codec: Arc<dyn Codec>,
+    /// Sink for received transmit audio (rig TX; no-op until the Pi adapter).
+    pub sink: Arc<dyn AudioSink>,
     /// Samples per audio frame.
     pub frame_samples: usize,
     /// One frame per this period (e.g. 20 ms).
@@ -155,8 +157,17 @@ async fn session(
                             }
                         }
                     }
+                    Some(Ok(Message::Binary(bytes))) => {
+                        // Transmit audio (FR-AUD-02) requires Operator; any other
+                        // role's TX frames are dropped (per-message-type ACL).
+                        if claims.role.allows(Role::Operator) {
+                            if let Some((_seq, payload)) = split_frame(&bytes) {
+                                audio.sink.accept(&audio.codec.decode(payload));
+                            }
+                        }
+                    }
                     Some(Ok(Message::Close(_)) | Err(_)) | None => break,
-                    Some(Ok(_)) => {} // ignore binary/ping/pong
+                    Some(Ok(_)) => {} // ignore ping/pong
                 }
             }
             _ = spectrum_ticker.tick(), if spectrum_on => {

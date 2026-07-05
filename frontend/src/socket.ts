@@ -13,7 +13,7 @@ import { backoffDelay, DEFAULT_BACKOFF, type BackoffOptions } from "./backoff.ts
 /** The minimal WebSocket surface this client depends on. */
 export interface WebSocketLike {
   close(): void;
-  send(data: string): void;
+  send(data: string | ArrayBuffer): void;
   onopen: (() => void) | null;
   onclose: (() => void) | null;
   onmessage: ((event: { data: string | ArrayBuffer }) => void) | null;
@@ -96,7 +96,7 @@ export class ReconnectingSocket {
   }
 
   /** Send data if the socket is open; a no-op otherwise. */
-  send(data: string): void {
+  send(data: string | ArrayBuffer): void {
     if (this.currentState === "open") {
       this.socket?.send(data);
     }

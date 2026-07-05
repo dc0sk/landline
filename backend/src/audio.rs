@@ -138,6 +138,32 @@ pub trait Codec: Send + Sync {
     fn decode(&self, payload: &[u8]) -> Vec<i16>;
 }
 
+/// Sink for transmit audio decoded from the client (FR-AUD-02). The Pi-side rig
+/// TX playback implements this; [`NoopSink`] discards until that lands (HIL).
+pub trait AudioSink: Send + Sync {
+    /// Accept a block of decoded PCM samples destined for the rig.
+    fn accept(&self, pcm: &[i16]);
+}
+
+/// An audio sink that discards everything (default until Pi TX playback lands).
+pub struct NoopSink;
+
+impl AudioSink for NoopSink {
+    fn accept(&self, _pcm: &[i16]) {}
+}
+
+/// Split a binary audio frame into its sequence number and encoded payload
+/// (8-byte little-endian sequence header + payload). Returns `None` if the frame
+/// is too short to contain a header.
+#[must_use]
+pub fn split_frame(frame: &[u8]) -> Option<(u64, &[u8])> {
+    if frame.len() < 8 {
+        return None;
+    }
+    let seq = u64::from_le_bytes(frame[0..8].try_into().ok()?);
+    Some((seq, &frame[8..]))
+}
+
 /// A dependency-free passthrough codec: little-endian 16-bit PCM. Used as the
 /// default and in tests; the WAN default (Opus) is a native adapter.
 pub struct PcmCodec;
@@ -231,5 +257,17 @@ mod tests {
         assert_eq!(f32_to_pcm16(&[0.0, 1.0, -1.0]), [0, 32_767, -32_767]);
         // Out-of-range input is clamped, not wrapped.
         assert_eq!(f32_to_pcm16(&[2.0, -2.0]), [32_767, -32_767]);
+    }
+
+    #[test]
+    fn split_frame_reads_header_and_payload() {
+        use super::split_frame;
+        let mut frame = 7_u64.to_le_bytes().to_vec();
+        frame.extend_from_slice(&[1, 2, 3, 4]);
+        let (seq, payload) = split_frame(&frame).unwrap();
+        assert_eq!(seq, 7);
+        assert_eq!(payload, &[1, 2, 3, 4]);
+        // A frame shorter than the 8-byte header is rejected.
+        assert!(split_frame(&[0, 1, 2]).is_none());
     }
 }

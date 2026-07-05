@@ -3,8 +3,9 @@
 //! Usage:
 //!   cargo run -p landline-backend --bin landline-hash -- <password>
 //!
-//! Copy the printed PHC string into a `[[users]]` `password_hash` field. The
-//! plaintext password is never stored (NFR-SEC-12).
+//! Copy the printed PHC string into a `[[auth.users]]` `password_hash` field
+//! (note the table path — users live under `[auth]`). The plaintext password is
+//! never stored (NFR-SEC-12).
 
 use std::process::ExitCode;
 

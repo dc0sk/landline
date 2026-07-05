@@ -372,6 +372,28 @@ mod tests {
     }
 
     #[test]
+    fn parses_users_under_auth_table() {
+        // Users MUST live under `[[auth.users]]` (config.example.toml). A bare
+        // top-level `[[users]]` is a different array and leaves auth.users empty
+        // — the mistake that made every login 401 in first HIL bring-up.
+        let cfg: Config = toml::from_str(concat!(
+            "[auth]\n",
+            "[[auth.users]]\n",
+            "name = \"op\"\n",
+            "role = \"operator\"\n",
+            "password_hash = \"$argon2id$v=19$m=19456,t=2,p=1$c29tZXNhbHQ$aGFzaA\"\n",
+        ))
+        .unwrap();
+        assert_eq!(cfg.auth.users.len(), 1);
+        assert_eq!(cfg.auth.users[0].name, "op");
+
+        let wrong: Config =
+            toml::from_str("[auth]\n[[users]]\nname = \"op\"\nrole = \"operator\"\npassword_hash = \"x\"\n")
+                .unwrap();
+        assert!(wrong.auth.users.is_empty(), "bare [[users]] must not populate auth.users");
+    }
+
+    #[test]
     fn owner_only_mode_detection() {
         // NFR-SEC-03: owner-only (no group/other bits).
         assert!(super::mode_is_owner_only(0o600));

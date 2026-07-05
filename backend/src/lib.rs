@@ -36,7 +36,7 @@ use axum::{middleware, Extension, Router};
 use tower_http::limit::RequestBodyLimitLayer;
 use tower_http::trace::TraceLayer;
 
-use crate::audio::{NoopSink, PcmCodec};
+use crate::audio::{Codec, NoopSink, PcmCodec};
 use crate::audit::AuditLog;
 use crate::auth::Auth;
 use crate::config::Config;
@@ -85,9 +85,23 @@ pub fn app(config: &Config) -> Router {
         Arc::new(SyntheticSource::new(config.audio.sample_rate_hz, tone_hz));
     let frame_samples =
         (config.audio.sample_rate_hz as usize * config.audio.frame_ms as usize) / 1000;
+    // Opus when built with --features opus (Pi/native), PCM otherwise (default,
+    // C-free). A failed Opus init falls back to PCM rather than aborting startup.
+    #[cfg(feature = "opus")]
+    let codec: Arc<dyn Codec> =
+        match crate::audio::OpusCodec::new(config.audio.sample_rate_hz, config.audio.bitrate_bps) {
+            Ok(codec) => Arc::new(codec),
+            Err(err) => {
+                tracing::warn!(error = %err, "opus init failed; falling back to PCM");
+                Arc::new(PcmCodec)
+            }
+        };
+    #[cfg(not(feature = "opus"))]
+    let codec: Arc<dyn Codec> = Arc::new(PcmCodec);
+
     let audio_runtime = Arc::new(AudioRuntime {
         source: audio_source,
-        codec: Arc::new(PcmCodec),
+        codec,
         sink: Arc::new(NoopSink),
         frame_samples: frame_samples.max(1),
         frame_period: Duration::from_millis(u64::from(config.audio.frame_ms.max(1))),

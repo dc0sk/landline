@@ -14,8 +14,9 @@
 //! and the WebSocket audio transport plug in behind these seams and are
 //! validated hardware-in-the-loop.
 
-// Sample→PCM conversion casts are intentional and bounded (clamped to [-1, 1]).
-#![allow(clippy::cast_possible_truncation)]
+// Sample↔PCM conversion casts are intentional and bounded (clamped to [-1, 1]);
+// sample-index/rate casts are small integers exact in f32.
+#![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
 
 use std::collections::BTreeMap;
 
@@ -185,6 +186,68 @@ impl Codec for PcmCodec {
     }
 }
 
+/// A `libopus`-backed codec (mono, voice), gated behind the `opus` Cargo feature
+/// so it — and its C dependency — are absent from the default cross-build. Encode
+/// and decode are serialised (the `libopus` state is not `Sync`).
+#[cfg(feature = "opus")]
+pub struct OpusCodec {
+    encoder: std::sync::Mutex<opus::Encoder>,
+    decoder: std::sync::Mutex<opus::Decoder>,
+}
+
+#[cfg(feature = "opus")]
+impl OpusCodec {
+    /// Create an Opus codec for the given sample rate and target bitrate.
+    ///
+    /// # Errors
+    /// Returns the underlying `opus::Error` if libopus rejects the parameters.
+    pub fn new(sample_rate: u32, bitrate_bps: u32) -> Result<Self, opus::Error> {
+        let mut encoder =
+            opus::Encoder::new(sample_rate, opus::Channels::Mono, opus::Application::Voip)?;
+        encoder.set_bitrate(opus::Bitrate::Bits(
+            i32::try_from(bitrate_bps).unwrap_or(16_000),
+        ))?;
+        let decoder = opus::Decoder::new(sample_rate, opus::Channels::Mono)?;
+        Ok(Self {
+            encoder: std::sync::Mutex::new(encoder),
+            decoder: std::sync::Mutex::new(decoder),
+        })
+    }
+}
+
+#[cfg(feature = "opus")]
+impl Codec for OpusCodec {
+    fn encode(&self, samples: &[i16]) -> Vec<u8> {
+        let mut out = vec![0u8; 4000];
+        let mut encoder = self
+            .encoder
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        match encoder.encode(samples, &mut out) {
+            Ok(n) => {
+                out.truncate(n);
+                out
+            }
+            Err(_) => Vec::new(),
+        }
+    }
+
+    fn decode(&self, payload: &[u8]) -> Vec<i16> {
+        let mut out = vec![0i16; 5760]; // up to 120 ms at 48 kHz
+        let mut decoder = self
+            .decoder
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        match decoder.decode(payload, &mut out, false) {
+            Ok(n) => {
+                out.truncate(n);
+                out
+            }
+            Err(_) => Vec::new(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{AudioFrame, Codec, JitterBuffer, PcmCodec, Playout};
@@ -257,6 +320,22 @@ mod tests {
         assert_eq!(f32_to_pcm16(&[0.0, 1.0, -1.0]), [0, 32_767, -32_767]);
         // Out-of-range input is clamped, not wrapped.
         assert_eq!(f32_to_pcm16(&[2.0, -2.0]), [32_767, -32_767]);
+    }
+
+    #[cfg(feature = "opus")]
+    #[test]
+    fn opus_codec_round_trips_a_frame() {
+        use super::{Codec, OpusCodec};
+        let codec = OpusCodec::new(48_000, 16_000).unwrap();
+        // One 20 ms mono frame at 48 kHz = 960 samples (a valid Opus frame size).
+        let samples: Vec<i16> = (0..960)
+            .map(|n| ((n as f32 * 0.1).sin() * 8000.0) as i16)
+            .collect();
+        let encoded = codec.encode(&samples);
+        assert!(!encoded.is_empty(), "opus produced a packet");
+        let decoded = codec.decode(&encoded);
+        // Opus is lossy, so exact samples differ; the frame length is preserved.
+        assert_eq!(decoded.len(), samples.len());
     }
 
     #[test]

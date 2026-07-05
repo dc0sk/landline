@@ -1,7 +1,7 @@
 ---
 title: Action List
 status: Draft
-version: "0.16"
+version: "0.17"
 updated: 2026-07-05
 authors:
   - Simon Keimer (DC0SK)
@@ -49,9 +49,12 @@ License notice: This project is licensed under AGPL-3.0-only. See the top-level 
   and tested (62 Rust tests), which also lands the Phase-1-deferred WS security items
   (TC-AUTH-01 WS auth, TC-SEC-05 WS frame limit). A29 added the browser **Canvas 2D waterfall**
   (no WebGL) consuming that stream over the reconnecting socket. A30 added the audio device
-  selector (MediaDevices) + touch refinements — **Phase 2 is development-complete** (A28–A30;
-  29 frontend + 62 Rust tests). **Next: the Phase 2 exit review** (roadmap §6) — reconcile exit
-  criteria against the automated suite vs. the browser-matrix HIL remainder, mirroring A27.
+  selector (MediaDevices) + touch refinements. **Phase 2 is complete** (A28–A30; 29 frontend +
+  62 Rust tests). The **Phase 2 exit review** reconciled roadmap §6 (met / software-complete-
+  pending-browser+HIL / not met) with a dated assessment and a test-strategy §6b execution
+  record: software-complete, formal gate pending browser-matrix + Pi HIL. **Next milestone:
+  Phase 3** — the audio pipeline (Opus RX/TX over WSS) + container evaluation + split-host,
+  per roadmap §7 (backlog EP-07/09/11, action items A31–A34).
 - Open Phase 0 remainder: secrets *rotation* policy (BL-012) is deferred to before production
   release — tracked below under Phase 4 preparation.
 
@@ -132,6 +135,7 @@ updated). In addition:
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.17 | 2026-07-05 | DC0SK | Phase 2 exit review: reconciled roadmap §6 exit criteria + test-strategy §6b execution record. Phase 2 development-complete; gate pending browser-matrix + Pi HIL. Next milestone Phase 3 (audio). |
 | 0.16 | 2026-07-05 | DC0SK | Marked A30 done: audio device selector (MediaDevices) + touch refinements. Phase 2 development-complete; next is the Phase 2 exit review. |
 | 0.15 | 2026-07-05 | DC0SK | Marked A29 done: ARC-12 Canvas 2D waterfall (no WebGL) + spectrum-client handshake over the reconnecting socket. 27 frontend tests. Next A30 (browser matrix + audio device selector). |
 | 0.14 | 2026-07-05 | DC0SK | Phase 2 started — marked A28 done: ARC-06 FFT pipeline + ARC-01 authenticated WebSocket transport streaming spectrum (also lands deferred WS auth/frame-limit items). 62 Rust tests. Next A29 (Canvas waterfall). |

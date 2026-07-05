@@ -1,7 +1,7 @@
 ---
 title: "Test Strategy & Traceability"
 status: Draft
-version: "0.7"
+version: "0.8"
 updated: 2026-07-05
 authors:
   - Simon Keimer (DC0SK)
@@ -283,11 +283,30 @@ browser-matrix run. "Deferred" = delivered in a later phase.
 is held pending the HIL, browser-matrix, and Phase-4 TLS items above (no `Fail` results — all
 open items are `Deferred`/`Blocked-on-hardware` with a tracked cause in the backlog).
 
+## 6b. Phase 2 execution record (2026-07-05)
+
+Snapshot at the Phase 2 exit review. Same legend as §6a.
+
+| Test cases | Level | Status | Evidence / note |
+|---|---|---|---|
+| TC-SPEC-01 | Integration | **Automated — pass** | `backend/tests/ws.rs`: authed WS delivers FFT-bin spectrum frames. |
+| TC-SPEC-02 | Integration | **Partial** | Update rate is configurable + clamped 1–10 Hz (`spectrum` config, WS loop); an automated delivery-rate assertion is not yet written. |
+| TC-SPEC-03, TC-SPEC-04 | Browser | **Browser (manual)** | Canvas 2D waterfall renders; pure colour-map logic unit-tested (`frontend/src/waterfall.test.ts`). No WebGL → iOS-Safari-safe by construction; on-device render is a browser-matrix run. |
+| TC-SPEC-05 | Performance | **HIL** | ≥ 2 Hz sustained under load on a Pi 4 (default rate 5 Hz). |
+| TC-AUTH-01 (WS) | Security | **Automated — pass** | `backend/tests/ws.rs`: unauth / bad-token WS handshakes rejected. |
+| TC-SEC-05 (WS frame) | Security | **Automated (config) / HIL** | WS upgrade caps message/frame size; an oversized-frame close is exercised on the real transport. |
+| TC-AUD-03, TC-AUD-04 | Browser | **Software done / browser** | MediaDevices enumeration + partition implemented and unit-tested (`frontend/src/audio-devices.test.ts`, NFR-COMPAT-07); on-device selection + iOS mic-permission flow is a browser-matrix run. |
+| TC-COMPAT-01..07 | Browser | **Browser (manual)** | Responsive layout + touch targets implemented; full matrix needs real devices. |
+
+**Disposition:** Phase 2 is software-complete and green under automation; the gate is held
+pending the browser-matrix and Pi HIL items (no `Fail` results).
+
 ---
 
 ## 7. Change History
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.8 | 2026-07-05 | DC0SK | Added §6b Phase 2 execution record: spectrum/WS automated vs. browser-matrix/HIL status at the Phase 2 exit review. |
 | 0.7 | 2026-07-05 | DC0SK | Added §6a Phase 1 execution record (A27): automated / HIL / browser / deferred status per test-case group at the Phase 1 exit review. |
 | 0.6 | 2026-06-26 | DC0SK | Migrated to TC ids; added TC-SPEC-05/AUDIT-03/MAINT-01/MAINT-02/DEPLOY-08/DEPLOY-09 to close M/S coverage. |

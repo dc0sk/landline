@@ -1,7 +1,7 @@
 ---
 title: Roadmap and Release Plan
 status: Draft
-version: 0.5.3
+version: 0.5.4
 updated: 2026-07-05
 authors:
   - Simon Keimer (DC0SK)
@@ -183,13 +183,40 @@ regressions were introduced.
 
 ### Exit Criteria
 
-- [ ] TC-SPEC-01–TC-SPEC-04 (spectrum/waterfall) pass on Firefox and Chromium desktop.
-- [ ] TC-SPEC-04 (iOS Safari Canvas rendering) pass.
-- [ ] TC-COMPAT-01–TC-COMPAT-07 (full browser matrix) complete with pass status.
-- [ ] TC-AUD-03–TC-AUD-04 (audio device selector) pass on at least Firefox desktop, Chrome Android, and Safari iOS.
-- [ ] Spectrum update rate ≥ 2 Hz verified on Pi 4 under load (NFR-PERF-05).
-- [ ] No Must backlog items in Phase 2 scope remain open.
-- [ ] docs/test/test-strategy.md updated with Phase 2 test execution records.
+Legend: **[x]** met and verified · **[~]** software-complete, pending browser-matrix or
+hardware-in-the-loop (HIL) · **[ ]** not yet met.
+
+- [~] TC-SPEC-01–TC-SPEC-04 (spectrum/waterfall) pass on Firefox and Chromium desktop. — *TC-SPEC-01 automated green (WS delivers FFT bins — `backend/tests/ws.rs`); TC-SPEC-02 rate is configurable + clamped 1–10 Hz; TC-SPEC-03/04 (Canvas render in a real browser) are browser-matrix.*
+- [ ] TC-SPEC-04 (iOS Safari Canvas rendering) pass. — *Structurally satisfied (Canvas 2D only, no WebGL); on-device confirmation is browser-matrix.*
+- [ ] TC-COMPAT-01–TC-COMPAT-07 (full browser matrix) complete with pass status. — *Browser-matrix / HIL: needs real Firefox/Chromium/Edge desktop + iOS Safari + Chrome Android.*
+- [~] TC-AUD-03–TC-AUD-04 (audio device selector) pass on at least Firefox desktop, Chrome Android, and Safari iOS. — *MediaDevices enumeration/partition implemented + unit-tested (NFR-COMPAT-07); on-device run is browser-matrix.*
+- [ ] Spectrum update rate ≥ 2 Hz verified on Pi 4 under load (NFR-PERF-05). — *HIL: default rate is 5 Hz (> 2 Hz); sustained-under-load measurement needs a Pi 4.*
+- [~] No Must backlog items in Phase 2 scope remain open. — *Open Must items are both HIL-blocked: BL-053 (iOS-Safari waterfall verify) and BL-060 (full browser matrix). BL-050/051/052/061/062 are Done.*
+- [x] docs/test/test-strategy.md updated with Phase 2 test execution records. — *See test-strategy §6b.*
+
+### Phase 2 exit assessment (2026-07-05)
+
+**Position: software-complete; the exit gate is NOT yet fully cleared — pending browser-matrix
+and Pi hardware-in-the-loop validation.**
+
+All Phase 2 build actions (A28–A30) are implemented and green under automation — 62 Rust tests
++ 29 frontend tests. The spectrum path is proven end-to-end in code: FFT (unit-tested) →
+authenticated WebSocket (integration-tested against a real server + client) → reconnecting
+client → Canvas 2D waterfall (pure logic unit-tested) → MediaDevices selector. Building the WS
+transport also retired three Phase-1 deferrals (TC-AUTH-01 WS auth, TC-SEC-05 WS frame limit,
+BL-022).
+
+The gate is not fully cleared for the same class of reasons as Phase 1:
+
+- **Browser matrix** — TC-SPEC-03/04 and TC-COMPAT-01–07 need real Firefox/Chromium/Edge
+  desktop, iOS Safari, and Chrome Android; TC-AUD-03/04 need on-device MediaDevices.
+- **Pi HIL** — TC-SPEC-05 (≥ 2 Hz sustained under load) needs a Raspberry Pi 4.
+
+**Recommended action:** treat Phase 2 as development-complete and fold TC-SPEC-03/04,
+TC-COMPAT-*, TC-AUD-03/04, and TC-SPEC-05 into the same browser-matrix + HIL campaign as the
+Phase 1 items. No scope or security regressions were introduced. Optionally, continuous S-meter
+streaming (BL-029) can now ride the WS telemetry channel; audio streaming (FR-AUD-01/02) is the
+Phase 3 build.
 
 ### Risks
 
@@ -298,6 +325,7 @@ At Phase 4 exit:
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.5.4 | 2026-07-05 | DC0SK | Phase 2 exit review: reconciled §6 exit criteria (met / software-complete-pending-browser+HIL / not met) + dated exit assessment — software-complete, gate pending browser-matrix + Pi HIL. |
 | 0.5.3 | 2026-07-05 | DC0SK | Phase 1 exit review (A27): reconciled §5 exit criteria against the automated suite (met / software-complete-pending-HIL / not met) and recorded a dated exit assessment — software-complete, formal gate pending hardware-in-the-loop + Phase-4 TLS. |
 | 0.5.2 | 2026-07-04 | DC0SK | Ticked all Phase 0 exit criteria (verified against existing docs) and recorded Phase 0 as complete / ready for Phase 1 entry. |
 | 0.5.1 | 2026-06-26 | DC0SK | Migrated to area-coded FR/NFR/TC ids and new doc-tree frontmatter. |

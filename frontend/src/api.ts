@@ -91,6 +91,21 @@ export class ApiClient {
     return (await response.json()) as T;
   }
 
+  /** Authenticated POST of a JSON body; throws [`ApiError`] on non-2xx. */
+  async post(path: string, accessToken: string, body: unknown): Promise<void> {
+    const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) {
+      throw new ApiError(response.status, `POST ${path} failed`);
+    }
+  }
+
   private toTokens(data: LoginResponse): Tokens {
     return {
       accessToken: data.access_token,

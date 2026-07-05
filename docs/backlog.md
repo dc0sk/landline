@@ -1,7 +1,7 @@
 ---
 title: Product Backlog
 status: Draft
-version: 0.5.24
+version: 0.5.25
 updated: 2026-07-05
 authors:
   - Simon Keimer (DC0SK)
@@ -156,7 +156,7 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 | BL-052 | Implement Canvas 2D waterfall renderer in frontend | Must | 2 | M | BL-040, BL-051 | FR-SPEC-03 | TC-SPEC-03 | Done |
 | BL-053 | Verify waterfall rendering on iOS Safari (no WebGL requirement) | Must | 2 | S | BL-052 | FR-SPEC-03 | TC-SPEC-04 | In Progress |
 | BL-054 | Add spectrum update rate configuration option | Should | 2 | S | BL-051 | FR-SPEC-02 | TC-SPEC-02 | Done |
-| BL-055 | Add colour palette selector for waterfall | Could | 2 | S | BL-052 | FR-SPEC-04 | — | Proposed |
+| BL-055 | Add colour palette selector for waterfall | Could | 2 | S | BL-052 | FR-SPEC-04 | — | Done |
 
 ---
 
@@ -262,6 +262,7 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.5.25 | 2026-07-05 | DC0SK | BL-055 (waterfall palette selection, FR-SPEC-04) → Done: hot/grayscale/ice palettes + UI selector; unit-tested. 38 frontend tests. |
 | 0.5.24 | 2026-07-05 | DC0SK | Opus codec (BL-076 Done): feature-gated libopus OpusCodec (configurable bitrate, FR-AUD-05); default build stays C-free, CI tests --features opus. |
 | 0.5.23 | 2026-07-05 | DC0SK | Mic TX path (BL-073 In Progress): backend Operator-gated TX receive → AudioSink seam; frontend MicCapture + encode + PTT-gated send. 74 Rust + 37 frontend tests. |
 | 0.5.22 | 2026-07-05 | DC0SK | Frontend RX audio client (BL-072 In Progress): TelemetryClient multiplexes spectrum+audio; audio-player parses binary frames + jitter buffer + Web Audio. 35 frontend tests. |

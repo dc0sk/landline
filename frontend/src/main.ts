@@ -19,7 +19,7 @@ import { AudioPlayer, MicCapture } from "./audio-player.ts";
 import { Session } from "./session.ts";
 import { browserSocket } from "./socket.ts";
 import { TelemetryClient } from "./telemetry-client.ts";
-import { WaterfallRenderer } from "./waterfall.ts";
+import { PALETTES, PALETTE_NAMES, WaterfallRenderer } from "./waterfall.ts";
 
 const BASE_URL = (globalThis as { LANDLINE_API_BASE?: string }).LANDLINE_API_BASE ?? "";
 
@@ -34,6 +34,7 @@ let pttActive = false;
 let telemetryClient: TelemetryClient | null = null;
 let audioPlayer: AudioPlayer | null = null;
 let micCapture: MicCapture | null = null;
+let waterfallRenderer: WaterfallRenderer | null = null;
 
 function wsUrl(): string {
   if (BASE_URL) {
@@ -52,14 +53,14 @@ function startTelemetry(): void {
   if (context === null) {
     return;
   }
-  const renderer = new WaterfallRenderer(context, { minDb: -90, maxDb: -10 });
+  waterfallRenderer = new WaterfallRenderer(context, { minDb: -90, maxDb: -10 });
   audioPlayer = new AudioPlayer(48_000);
   audioPlayer.start();
   telemetryClient = new TelemetryClient({
     url: wsUrl(),
     token: tokens.accessToken,
     connect: browserSocket,
-    onFrame: (frame) => renderer.push(frame.bins),
+    onFrame: (frame) => waterfallRenderer?.push(frame.bins),
     onAudio: (frame) => audioPlayer?.push(frame),
     onError: (message) => showRigError(message),
   });
@@ -72,6 +73,7 @@ function stopTelemetry(): void {
   telemetryClient = null;
   audioPlayer?.stop();
   audioPlayer = null;
+  waterfallRenderer = null;
 }
 
 function fillDeviceSelect(select: HTMLSelectElement, devices: AudioDevice[]): void {
@@ -321,6 +323,20 @@ function main(): void {
   });
   byId<HTMLButtonElement>("ptt-button").addEventListener("click", () => {
     void handlePtt();
+  });
+
+  const paletteSelect = byId<HTMLSelectElement>("palette-select");
+  for (const name of PALETTE_NAMES) {
+    const option = document.createElement("option");
+    option.value = name;
+    option.textContent = name;
+    paletteSelect.append(option);
+  }
+  paletteSelect.addEventListener("change", () => {
+    const palette = PALETTES[paletteSelect.value];
+    if (palette !== undefined) {
+      waterfallRenderer?.setPalette(palette);
+    }
   });
 
   window.setInterval(() => {

@@ -32,6 +32,36 @@ pub struct Config {
     pub gpio: GpioConfig,
     /// Spectrum/FFT + WebSocket telemetry settings (ARC-06).
     pub spectrum: SpectrumConfig,
+    /// Audio pipeline settings (ARC-05).
+    pub audio: AudioConfig,
+}
+
+/// Audio pipeline configuration (ARC-05).
+#[derive(Debug, Clone, Deserialize)]
+#[serde(default)]
+pub struct AudioConfig {
+    /// Sample rate in Hz.
+    pub sample_rate_hz: u32,
+    /// Frame duration in milliseconds.
+    pub frame_ms: u32,
+    /// Opus target bitrate in bits/second (FR-AUD-05, default 16 kbps).
+    pub bitrate_bps: u32,
+    /// Jitter-buffer target depth (frames to buffer before playout).
+    pub jitter_target_frames: usize,
+    /// Jitter-buffer maximum depth before a missing frame is concealed.
+    pub jitter_max_frames: usize,
+}
+
+impl Default for AudioConfig {
+    fn default() -> Self {
+        Self {
+            sample_rate_hz: 48_000,
+            frame_ms: 20,
+            bitrate_bps: 16_000,
+            jitter_target_frames: 3,
+            jitter_max_frames: 10,
+        }
+    }
 }
 
 /// Spectrum/FFT and WebSocket telemetry configuration (ARC-06).

@@ -1,7 +1,7 @@
 ---
 title: Product Backlog
 status: Draft
-version: 0.5.16
+version: 0.5.17
 updated: 2026-07-05
 authors:
   - Simon Keimer (DC0SK)
@@ -108,6 +108,8 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 | BL-032 | Structured tracing/logging integration | Must | 1 | S | BL-020 | NFR-SEC-09, NFR-SEC-12 | TC-SEC-09–TC-SEC-10 | In Progress |
 | BL-033 | Implement Raspberry Pi GPIO control API for at least 5 digital pins | Must | 1 | M | BL-020, BL-021 | FR-GPIO-01, NFR-SEC-16 | TC-GPIO-01, TC-SEC-15 | Done |
 
+**Note — audio software core (A31):** The ARC-05 `audio` module lands the pure, testable audio parts: a reordering `JitterBuffer` with graceful loss concealment (FR-AUD-06, so BL-077 In Progress) and a `Codec` seam + `PcmCodec` with `[audio]` bitrate config (FR-AUD-05, so BL-076 In Progress). The device ends and codec remain: libopus `OpusCodec` (feature-gated native adapter, keeps the default aarch64 cross-build C-free), CPAL capture/playback (BL-070/074), the WS binary audio transport + per-session auth (BL-071/075), and browser Web Audio (BL-072/073) — all validated hardware-in-the-loop.
+
 **Note — BL-060:** In Progress. The software targets are met — responsive layout, Canvas 2D waterfall (no WebGL), and MediaDevices-based device selection all implemented and unit-tested. Executing the full browser matrix (TC-COMPAT-01–07, TC-AUD-03/04 on Firefox/Chromium/Edge desktop + iOS Safari + Chrome Android) needs real devices and is the manual/HIL remainder.
 
 **Note — BL-053:** In Progress. The waterfall renderer uses only the Canvas 2D context + `ImageData` — no WebGL — so it is structurally iOS-Safari-compatible (FR-SPEC-03). On-device confirmation on iOS Safari (TC-SPEC-04) is part of the browser-matrix run (BL-060), which needs real devices.
@@ -170,8 +172,8 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 | BL-073 | Browser-side mic capture and Opus encode | Must | 3 | M | BL-062 | FR-AUD-02 | TC-AUD-02 | Proposed |
 | BL-074 | Pi-side Opus decode and audio playback (CPAL) | Must | 3 | M | BL-073 | FR-AUD-02 | TC-AUD-02 | Proposed |
 | BL-075 | Per-session auth check on audio WebSocket channel | Must | 3 | S | BL-021, BL-071 | FR-AUTH-01, NFR-SEC-01 | TC-AUTH-01, TC-SEC-01 | Proposed |
-| BL-076 | Bitrate/sample-rate profile for constrained mobile clients | Should | 3 | S | BL-071 | FR-AUD-05 | TC-AUD-05 | Proposed |
-| BL-077 | Audio drop/retry and watchdog | Should | 3 | M | BL-071 | FR-AUD-06 | TC-AUD-06 | Proposed |
+| BL-076 | Bitrate/sample-rate profile for constrained mobile clients | Should | 3 | S | BL-071 | FR-AUD-05 | TC-AUD-05 | In Progress |
+| BL-077 | Audio drop/retry and watchdog | Should | 3 | M | BL-071 | FR-AUD-06 | TC-AUD-06 | In Progress |
 | BL-078 | Measure and document end-to-end audio latency on Pi 4 | Must | 3 | S | BL-074 | NFR-PERF-02 | TC-PERF-02 | Proposed |
 
 ---
@@ -252,6 +254,7 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.5.17 | 2026-07-05 | DC0SK | Phase 3 start: audio software core (ARC-05 jitter buffer + codec seam + config) → BL-076/077 In Progress (FR-AUD-05/06). Native/HIL audio parts remain. |
 | 0.5.16 | 2026-07-05 | DC0SK | BL-062 (audio device selector) + BL-061 (touch optimisation) → Done; BL-060 (browser matrix) → In Progress (software done; on-device matrix is HIL). Phase 2 development-complete. |
 | 0.5.15 | 2026-07-05 | DC0SK | BL-052 (Canvas 2D waterfall) → Done; BL-053 (iOS Safari no-WebGL) → In Progress (structurally 2D-only; on-device verify is browser-matrix). 27 frontend tests. |
 | 0.5.14 | 2026-07-05 | DC0SK | Phase 2 start: BL-050/051/054 (FFT + spectrum WS stream) → Done; BL-022 (frame/size limits) → Done (WS frame cap now enforced on the ARC-01 WS transport). |

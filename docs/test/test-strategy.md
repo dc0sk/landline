@@ -1,7 +1,7 @@
 ---
 title: "Test Strategy & Traceability"
 status: Draft
-version: "0.8"
+version: "0.9"
 updated: 2026-07-05
 authors:
   - Simon Keimer (DC0SK)
@@ -303,10 +303,38 @@ pending the browser-matrix and Pi HIL items (no `Fail` results).
 
 ---
 
+## 6c. Rig HIL execution record (2026-07-05)
+
+First hardware-in-the-loop run: the release backend (static-musl aarch64 build) on the target
+Raspberry Pi, driving a real **Yaesu FT-991A** through `rigctld` (hamlib model 1035, CAT
+`/dev/ttyUSB0` @ 38400, NET on `127.0.0.1:4532`). Exercised via the HTTP API with an
+`operator` token. **No transmit performed**; frequencies constrained to 2 m / 10 m per the
+operator's safety limit.
+
+| Test cases | Level | Status | Evidence / note |
+|---|---|---|---|
+| TC-AUTH-01/02 | Security | **HIL — pass** | Login against the real deployment issues a working JWT; `authorization: Bearer` accepted; missing token → 401. |
+| TC-RIG-01 (frequency) | Integration | **HIL — pass** | `GET` reads 144.600 MHz; `POST` set to 145.500 MHz (2 m) and 28.400 MHz (10 m) → 204, readback confirms; restored to 144.600. |
+| TC-RIG-02 (mode) | Integration | **HIL — pass** | `GET` reads `USB`; `POST` mode `USB` passband 2400 → 204, readback confirms. |
+| TC-RIG (S-meter) | Integration | **HIL — pass** | `GET /api/rig/smeter` returns live strength (−54) from the rig. |
+| TC-SEC (input validation) | Security | **HIL — pass** | Negative frequency and a mode-injection string (`USB;rm -rf /`) both rejected with 400 before reaching rigctld. |
+| TC-AUDIT-01 | Security | **HIL — pass** | Hash-chained audit log records `auth.login`, `rig.set_freq`, `rig.set_mode` with `outcome="success"`, seq 0–4. |
+| TC-RIG (PTT) | Integration | **Deferred (safety)** | Not run — requires a dummy load; PTT/TX withheld pending operator confirmation. |
+| Spectrum / audio on real hardware | Integration | **Blocked on adapter** | The `SampleSource`/`AudioSink` CPAL adapter (rig USB-audio capture/playback) is not yet written; the pipeline currently streams a synthetic source. Needs `alsa-dev` on the Pi. |
+
+**Bug found & fixed:** login initially 401'd — the config example used `[[users]]` instead of
+`[[auth.users]]`, so no users loaded (fixed + regression-tested, PR #31).
+
+**Disposition:** rig-control HIL is **green**. Remaining HIL: PTT (needs dummy load), real
+spectrum/audio (needs the CPAL adapter), GPIO, and the browser matrix.
+
+---
+
 ## 7. Change History
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.9 | 2026-07-05 | DC0SK | Added §6c rig HIL execution record: rig control validated on a real Yaesu FT-991A (read/set freq 2 m+10 m, mode, S-meter, input-validation, audit); PTT + real spectrum/audio still deferred. |
 | 0.8 | 2026-07-05 | DC0SK | Added §6b Phase 2 execution record: spectrum/WS automated vs. browser-matrix/HIL status at the Phase 2 exit review. |
 | 0.7 | 2026-07-05 | DC0SK | Added §6a Phase 1 execution record (A27): automated / HIL / browser / deferred status per test-case group at the Phase 1 exit review. |
 | 0.6 | 2026-06-26 | DC0SK | Migrated to TC ids; added TC-SPEC-05/AUDIT-03/MAINT-01/MAINT-02/DEPLOY-08/DEPLOY-09 to close M/S coverage. |

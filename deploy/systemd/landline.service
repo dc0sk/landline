@@ -1,0 +1,62 @@
+# landline backend — native systemd deployment (A26, NFR-DEPLOY-02).
+#
+# Install:
+#   sudo useradd --system --no-create-home --shell /usr/sbin/nologin landline
+#   sudo install -Dm755 target/aarch64-unknown-linux-gnu/release/landline /usr/local/bin/landline
+#   sudo install -Dm640 -o landline -g landline backend/config.example.toml /etc/landline/config.toml
+#   sudo cp deploy/systemd/landline.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now landline
+#
+# The service binds to loopback by default (NFR-SEC-13); terminate TLS and proxy
+# WSS in front of it (Phase 4), or reach it over a WireGuard/Tailscale tunnel.
+
+[Unit]
+Description=landline — secure web remote for amateur-radio transceivers
+Documentation=https://github.com/dc0sk/landline
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+ExecStart=/usr/local/bin/landline
+Environment=LANDLINE_CONFIG=/etc/landline/config.toml
+User=landline
+Group=landline
+Restart=on-failure
+RestartSec=2
+
+# Writable state for the append-only audit log; everything else is read-only.
+StateDirectory=landline
+ReadWritePaths=/var/lib/landline
+
+# --- Sandboxing / least privilege (security-first governance) ---
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+# GPIO is disabled by default. To use GPIO on a Raspberry Pi, set
+# PrivateDevices=false and add e.g. DeviceAllow=/dev/gpiochip0 rw.
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+CapabilityBoundingSet=
+AmbientCapabilities=
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+
+# --- Resource limits ---
+MemoryMax=256M
+TasksMax=64
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,149 @@
+/* landline frontend styles (A25). Responsive, touch-friendly, theme-aware
+   (NFR-COMPAT-03 mobile, NFR-COMPAT-06 touch). Mobile-first: controls stack in
+   one column and expand to a three-column grid on wider viewports. */
+
+:root {
+  color-scheme: light dark;
+  --bg: #ffffff;
+  --fg: #1a1a1a;
+  --muted: #666666;
+  --border: #d0d0d0;
+  --accent: #1565c0;
+  --card: #f6f6f6;
+  --tx: #c62828;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #121212;
+    --fg: #e8e8e8;
+    --muted: #9a9a9a;
+    --border: #333333;
+    --accent: #64b5f6;
+    --card: #1e1e1e;
+    --tx: #ef5350;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  line-height: 1.5;
+}
+
+main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+h1 {
+  font-size: 1.5rem;
+}
+
+label {
+  display: block;
+  margin: 0.5rem 0;
+}
+
+input,
+select,
+button {
+  font: inherit;
+  min-height: 44px; /* touch target (NFR-COMPAT-06) */
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--fg);
+  max-width: 100%;
+}
+
+button {
+  cursor: pointer;
+  background: var(--accent);
+  color: #ffffff;
+  border-color: transparent;
+}
+
+button:hover {
+  filter: brightness(1.05);
+}
+
+#login-view form {
+  max-width: 320px;
+}
+
+#app-view header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+#app-view header #logout {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--border);
+}
+
+#rig-panel {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 700px) {
+  #rig-panel {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+#rig-panel > div,
+#rig-panel > form {
+  margin: 0;
+  padding: 1rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+#rig-error {
+  grid-column: 1 / -1;
+  min-height: 1.5em;
+  color: var(--tx);
+}
+
+[role="alert"]:empty {
+  display: none;
+}
+
+#freq-display,
+#smeter-display {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+output {
+  display: inline-block;
+}
+
+#ptt-button {
+  width: 100%;
+  font-weight: 700;
+}
+
+/* Transmit indicator (FR-RIG-05): unmistakable colour while keyed. */
+#ptt-button.transmitting {
+  background: var(--tx);
+}

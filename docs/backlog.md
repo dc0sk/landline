@@ -1,7 +1,7 @@
 ---
 title: Product Backlog
 status: Draft
-version: 0.5.12
+version: 0.5.13
 updated: 2026-07-05
 authors:
   - Simon Keimer (DC0SK)
@@ -129,7 +129,7 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 | BL-044 | Implement PTT button with visual transmit indicator | Must | 1 | S | BL-040, BL-028 | FR-RIG-05 | TC-RIG-04 | Done |
 | BL-045 | Implement S-meter display | Should | 1 | S | BL-040, BL-029 | FR-RIG-06 | TC-RIG-06 | Done |
 | BL-046 | Implement WebSocket client with reconnect/backoff | Must | 1 | M | BL-040 | NFR-REL-01 | TC-REL-01 | Done |
-| BL-047 | Responsive CSS layout (desktop 3-column, mobile vertical stack) | Must | 1 | M | BL-040 | NFR-COMPAT-03–NFR-COMPAT-06 | TC-COMPAT-04–TC-COMPAT-07 | Proposed |
+| BL-047 | Responsive CSS layout (desktop 3-column, mobile vertical stack) | Must | 1 | M | BL-040 | NFR-COMPAT-03–NFR-COMPAT-06 | TC-COMPAT-04–TC-COMPAT-07 | Done |
 
 ---
 
@@ -176,7 +176,7 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 
 | ID | Title | Priority | Phase | Est. | Deps | Req IDs | Test IDs | Status |
 |---|---|---|---|---|---|---|---|---|
-| BL-080 | Write systemd service unit (start/stop/restart, resource limits) | Must | 1 | S | BL-020 | NFR-DEPLOY-02 | TC-DEPLOY-03 | Proposed |
+| BL-080 | Write systemd service unit (start/stop/restart, resource limits) | Must | 1 | S | BL-020 | NFR-DEPLOY-02 | TC-DEPLOY-03 | Done |
 | BL-081 | Configure TOML config file with defaults | Must | 1 | S | BL-020 | NFR-DEPLOY-04 | — | In Progress |
 | BL-082 | Document rollback procedure for native deployment | Must | 4 | S | BL-080 | NFR-DEPLOY-05 | TC-DEPLOY-06 | Proposed |
 | BL-083 | Cross-compile release binary for aarch64-unknown-linux-gnu | Must | 1 | S | BL-020 | NFR-DEPLOY-01 | TC-DEPLOY-01–TC-DEPLOY-02 | Done |
@@ -248,6 +248,7 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.5.13 | 2026-07-05 | DC0SK | BL-047 (responsive CSS) + BL-080 (systemd unit) → Done. All Phase 1 build actions complete; only the exit review (A27) remains. |
 | 0.5.12 | 2026-07-05 | DC0SK | BL-043 (mode selector) + BL-044 (PTT button) + BL-045 (S-meter display) → Done. Full rig-control UI wired; 22 frontend tests. |
 | 0.5.11 | 2026-07-05 | DC0SK | BL-046 (WS client reconnect/backoff, NFR-REL-01) + BL-042 (frequency display/tuning) → Done. Frontend now at 18 unit tests. |
 | 0.5.10 | 2026-07-04 | DC0SK | BL-040 (TS frontend project) + BL-041 (session bootstrap) → Done: ARC-10 frontend started — typed API/session/backoff modules, login UI, 11 tests, CI frontend job. |

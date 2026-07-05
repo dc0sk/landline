@@ -69,43 +69,7 @@ pub fn app(config: &Config) -> Router {
     // Synthetic tone at 1/8 of the sample rate (small integer → exact in f32).
     #[allow(clippy::cast_precision_loss)]
     let tone_hz = config.spectrum.sample_rate_hz as f32 / 8.0;
-    let synth_spectrum = || -> Arc<dyn SampleSource> {
-        Arc::new(SyntheticSource::new(config.spectrum.sample_rate_hz, tone_hz))
-    };
-    let synth_audio = || -> Arc<dyn SampleSource> {
-        Arc::new(SyntheticSource::new(config.audio.sample_rate_hz, tone_hz))
-    };
-    // Real rig audio via the USB codec when built with --features audio-device;
-    // fall back to the synthetic source / no-op sink on any device-open failure.
-    #[cfg(feature = "audio-device")]
-    let (source, audio_source, audio_sink): (
-        Arc<dyn SampleSource>,
-        Arc<dyn SampleSource>,
-        Arc<dyn AudioSink>,
-    ) = match crate::audio_device::CpalCapture::new(config.audio.capture_device.clone(), 2) {
-        Ok(capture) => {
-            let sink: Arc<dyn AudioSink> =
-                match crate::audio_device::CpalSink::new(config.audio.playback_device.clone()) {
-                    Ok(sink) => Arc::new(sink),
-                    Err(err) => {
-                        tracing::warn!(error = %err, "audio playback init failed; using no-op sink");
-                        Arc::new(NoopSink)
-                    }
-                };
-            tracing::info!("audio-device capture active (spectrum + audio from rig)");
-            (Arc::new(capture.tap(0)), Arc::new(capture.tap(1)), sink)
-        }
-        Err(err) => {
-            tracing::warn!(error = %err, "audio capture init failed; using synthetic source");
-            (synth_spectrum(), synth_audio(), Arc::new(NoopSink))
-        }
-    };
-    #[cfg(not(feature = "audio-device"))]
-    let (source, audio_source, audio_sink): (
-        Arc<dyn SampleSource>,
-        Arc<dyn SampleSource>,
-        Arc<dyn AudioSink>,
-    ) = (synth_spectrum(), synth_audio(), Arc::new(NoopSink));
+    let (source, audio_source, audio_sink) = audio_io(config, tone_hz);
     let spectrum = Arc::new(SpectrumRuntime {
         analyzer: Arc::new(SpectrumAnalyzer::new(config.spectrum.fft_size)),
         source,
@@ -152,9 +116,16 @@ pub fn app(config: &Config) -> Router {
             security::rate_limit,
         ));
 
-    routes::router()
-        .merge(protected)
-        .layer(Extension(auth))
+    // Optionally serve the static frontend at `/` (single-host deployments).
+    let base = routes::router().merge(protected);
+    let base = match &config.server.static_dir {
+        Some(dir) => base.fallback_service(
+            tower_http::services::ServeDir::new(dir).append_index_html_on_directories(true),
+        ),
+        None => base,
+    };
+
+    base.layer(Extension(auth))
         .layer(Extension(audit))
         .layer(Extension(rig))
         .layer(Extension(ptt))
@@ -166,4 +137,40 @@ pub fn app(config: &Config) -> Router {
         .layer(TraceLayer::new_for_http())
         // Outermost: catch any handler panic and return a sanitised 500 (NFR-SEC-09).
         .layer(security::catch_panic_layer())
+}
+
+/// Build the spectrum source, audio-RX source, and audio-TX sink. With the
+/// `audio-device` feature these come from the rig's USB codec (two capture taps
+/// plus a playback sink); otherwise (or on any device-open failure) they fall
+/// back to a synthetic tone source and a no-op sink so the server still starts.
+type AudioIo = (Arc<dyn SampleSource>, Arc<dyn SampleSource>, Arc<dyn AudioSink>);
+
+fn audio_io(config: &Config, tone_hz: f32) -> AudioIo {
+    let synth_spectrum =
+        || -> Arc<dyn SampleSource> { Arc::new(SyntheticSource::new(config.spectrum.sample_rate_hz, tone_hz)) };
+    let synth_audio =
+        || -> Arc<dyn SampleSource> { Arc::new(SyntheticSource::new(config.audio.sample_rate_hz, tone_hz)) };
+
+    #[cfg(feature = "audio-device")]
+    match crate::audio_device::CpalCapture::new(config.audio.capture_device.clone(), 2) {
+        Ok(capture) => {
+            let sink: Arc<dyn AudioSink> =
+                match crate::audio_device::CpalSink::new(config.audio.playback_device.clone()) {
+                    Ok(sink) => Arc::new(sink),
+                    Err(err) => {
+                        tracing::warn!(error = %err, "audio playback init failed; using no-op sink");
+                        Arc::new(NoopSink)
+                    }
+                };
+            tracing::info!("audio-device capture active (spectrum + audio from rig)");
+            (Arc::new(capture.tap(0)), Arc::new(capture.tap(1)), sink)
+        }
+        Err(err) => {
+            tracing::warn!(error = %err, "audio capture init failed; using synthetic source");
+            (synth_spectrum(), synth_audio(), Arc::new(NoopSink))
+        }
+    }
+
+    #[cfg(not(feature = "audio-device"))]
+    (synth_spectrum(), synth_audio(), Arc::new(NoopSink))
 }

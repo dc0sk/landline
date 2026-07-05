@@ -239,6 +239,11 @@ pub struct ServerConfig {
     pub bind: IpAddr,
     /// TCP port.
     pub port: u16,
+    /// Optional directory of static frontend files to serve at `/` (single-host
+    /// deployments). Unset = API only; the split-host topology serves the UI
+    /// from a separate origin behind the reverse proxy instead.
+    #[serde(default)]
+    pub static_dir: Option<PathBuf>,
 }
 
 impl Default for ServerConfig {
@@ -246,6 +251,7 @@ impl Default for ServerConfig {
         Self {
             bind: IpAddr::V4(Ipv4Addr::LOCALHOST),
             port: 8443,
+            static_dir: None,
         }
     }
 }

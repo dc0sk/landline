@@ -15,6 +15,9 @@ import {
   type RigMode,
 } from "./control.ts";
 import { Session } from "./session.ts";
+import { browserSocket } from "./socket.ts";
+import { SpectrumClient } from "./spectrum-client.ts";
+import { WaterfallRenderer } from "./waterfall.ts";
 
 const BASE_URL = (globalThis as { LANDLINE_API_BASE?: string }).LANDLINE_API_BASE ?? "";
 
@@ -26,6 +29,40 @@ const api = new ApiClient({
 const session = new Session();
 
 let pttActive = false;
+let spectrumClient: SpectrumClient | null = null;
+
+function wsUrl(): string {
+  if (BASE_URL) {
+    return `${BASE_URL.replace(/^http/, "ws")}/ws`;
+  }
+  const scheme = window.location.protocol === "https:" ? "wss:" : "ws:";
+  return `${scheme}//${window.location.host}/ws`;
+}
+
+function startTelemetry(): void {
+  const tokens = session.current;
+  if (tokens === null || spectrumClient !== null) {
+    return;
+  }
+  const context = byId<HTMLCanvasElement>("waterfall").getContext("2d");
+  if (context === null) {
+    return;
+  }
+  const renderer = new WaterfallRenderer(context, { minDb: -90, maxDb: -10 });
+  spectrumClient = new SpectrumClient({
+    url: wsUrl(),
+    token: tokens.accessToken,
+    connect: browserSocket,
+    onFrame: (frame) => renderer.push(frame.bins),
+    onError: (message) => showRigError(message),
+  });
+  spectrumClient.start();
+}
+
+function stopTelemetry(): void {
+  spectrumClient?.stop();
+  spectrumClient = null;
+}
 
 function byId<T extends HTMLElement = HTMLElement>(id: string): T {
   const element = document.getElementById(id);
@@ -159,6 +196,7 @@ async function handleLogin(event: SubmitEvent): Promise<void> {
   const password = byId<HTMLInputElement>("password").value;
   try {
     session.set(await api.login(name, password));
+    startTelemetry();
     render();
   } catch {
     // Generic message: the server does not reveal why auth failed, and neither
@@ -176,6 +214,7 @@ async function handleLogout(): Promise<void> {
       // Best-effort: clear the local session regardless.
     }
   }
+  stopTelemetry();
   session.clear();
   render();
 }

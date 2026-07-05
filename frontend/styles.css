@@ -147,3 +147,24 @@ output {
 #ptt-button.transmitting {
   background: var(--tx);
 }
+
+#spectrum-panel {
+  margin-top: 1rem;
+}
+
+#spectrum-panel h2 {
+  font-size: 1rem;
+  margin: 0 0 0.5rem;
+}
+
+/* One canvas pixel per FFT bin; scale to the display width. `pixelated` keeps
+   the waterfall crisp, and the fixed CSS height decouples display from bin count. */
+#waterfall {
+  display: block;
+  width: 100%;
+  height: 180px;
+  background: #000000;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  image-rendering: pixelated;
+}

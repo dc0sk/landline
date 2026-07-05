@@ -1,7 +1,7 @@
 ---
 title: Action List
 status: Draft
-version: "0.14"
+version: "0.15"
 updated: 2026-07-05
 authors:
   - Simon Keimer (DC0SK)
@@ -47,8 +47,9 @@ License notice: This project is licensed under AGPL-3.0-only. See the top-level 
   matrix) and the Phase-4 TLS front end. **Phase 2 has started (A28):** the backend spectrum
   path — FFT pipeline + authenticated WebSocket transport streaming spectrum frames — is done
   and tested (62 Rust tests), which also lands the Phase-1-deferred WS security items
-  (TC-AUTH-01 WS auth, TC-SEC-05 WS frame limit). **Next: A29** — the browser Canvas waterfall
-  renderer consuming that stream.
+  (TC-AUTH-01 WS auth, TC-SEC-05 WS frame limit). A29 added the browser **Canvas 2D waterfall**
+  (no WebGL) consuming that stream over the reconnecting socket. **Next: A30** — full browser
+  matrix validation, touch optimisation, and the audio device selector UI (bridges into Phase 3).
 - Open Phase 0 remainder: secrets *rotation* policy (BL-012) is deferred to before production
   release — tracked below under Phase 4 preparation.
 
@@ -95,7 +96,7 @@ Frontend bootstrap can start in parallel once the auth contract (A6) is stable.
 ## 4. Milestone: Phase 2 — spectrum, waterfall, mobile
 
 - [x] A28. FFT pipeline + spectrum WebSocket stream at configurable rate — BL-050, BL-051, BL-054 · FR-SPEC-01–FR-SPEC-02 · TC-SPEC-01–TC-SPEC-02 — *done: ARC-06 `spectrum` module (rustfft, Hann window, dB bins, `SampleSource` seam + synthetic source) + ARC-01 `ws` module — authenticated WebSocket (first-message JWT auth, TC-AUTH-01; frame-size caps, NFR-SEC-05/TC-SEC-05) streaming spectrum frames at the configured 1–10 Hz rate. 4 FFT unit + 3 WS integration tests (real server + client). Real audio source is Phase 3; the Canvas renderer is A29*
-- [ ] A29. Canvas 2D waterfall renderer; verify on iOS Safari (no WebGL) — BL-052, BL-053 · FR-SPEC-03 · TC-SPEC-03–TC-SPEC-04
+- [x] A29. Canvas 2D waterfall renderer; verify on iOS Safari (no WebGL) — BL-052, BL-053 · FR-SPEC-03 · TC-SPEC-03–TC-SPEC-04 — *done: ARC-12 `waterfall.ts` — scrolling Canvas 2D waterfall (no WebGL → iOS-Safari-safe), pure normalise/palette/row logic unit-tested; `spectrum-client.ts` wires the reconnecting socket through the auth→subscribe handshake to the renderer. 5 unit tests. On-device iOS-Safari confirmation (TC-SPEC-04) is a browser-matrix run (BL-053)*
 - [ ] A30. Full browser matrix validation, touch optimisation, audio device selector UI — BL-060–BL-062 · NFR-COMPAT-01–NFR-COMPAT-07, FR-AUD-03–FR-AUD-04 · TC-COMPAT-01–TC-COMPAT-07, TC-AUD-03–TC-AUD-04
 
 ## 5. Milestone: Phase 3 — audio, container evaluation, split-host (forward-looking)
@@ -129,6 +130,7 @@ updated). In addition:
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.15 | 2026-07-05 | DC0SK | Marked A29 done: ARC-12 Canvas 2D waterfall (no WebGL) + spectrum-client handshake over the reconnecting socket. 27 frontend tests. Next A30 (browser matrix + audio device selector). |
 | 0.14 | 2026-07-05 | DC0SK | Phase 2 started — marked A28 done: ARC-06 FFT pipeline + ARC-01 authenticated WebSocket transport streaming spectrum (also lands deferred WS auth/frame-limit items). 62 Rust tests. Next A29 (Canvas waterfall). |
 | 0.13 | 2026-07-05 | DC0SK | Marked A27 done: Phase 1 exit review — reconciled roadmap §5 exit criteria + test-strategy execution record. Phase 1 development-complete; formal gate pending HIL + Phase-4 TLS. |
 | 0.12 | 2026-07-05 | DC0SK | Marked A25–A26 done: responsive CSS layout (mobile→3-col, touch, light/dark) and hardened systemd unit + deploy README. Only A27 (Phase 1 exit review) remains. |

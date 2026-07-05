@@ -1,7 +1,7 @@
 ---
 title: Product Backlog
 status: Draft
-version: 0.5.21
+version: 0.5.22
 updated: 2026-07-05
 authors:
   - Simon Keimer (DC0SK)
@@ -112,7 +112,7 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 
 **Note — split-host (A34):** BL-110–114 Done as documentation/config artifacts in `deploy/split-host/` (topology, WireGuard templates, Tailscale ACL, SSH fallback, tunnel-interface bind). On-network verification (TC-HOST-01/02/03, TC-SEC-12/13/14, TC-DEPLOY-07) is hardware-in-the-loop. BL-113 (FR-HOST-04) is fully done in code (`LANDLINE_API_BASE`).
 
-**Note — audio (A31):** The ARC-05 `audio` module and the WS audio transport are done in software: a reordering `JitterBuffer` with graceful loss concealment (FR-AUD-06, BL-077 In Progress), a `Codec` seam + `PcmCodec` with `[audio]` bitrate config (FR-AUD-05, BL-076 In Progress), and the **authenticated WS binary audio RX stream** (BL-071 In Progress — transport + per-session auth BL-075 Done; streams synthetic-source PCM frames, tested in `backend/tests/ws.rs`). The device ends and codec remain hardware-in-the-loop: libopus `OpusCodec` (feature-gated native adapter, keeps the default aarch64 cross-build C-free), CPAL capture/playback (BL-070/074), the browser Web Audio playback + mic TX (BL-072/073), and end-to-end latency (BL-078).
+**Note — audio (A31):** The ARC-05 `audio` module and the WS audio transport are done in software: a reordering `JitterBuffer` with graceful loss concealment (FR-AUD-06, BL-077 In Progress), a `Codec` seam + `PcmCodec` with `[audio]` bitrate config (FR-AUD-05, BL-076 In Progress), and the **authenticated WS binary audio RX stream** (BL-071 In Progress — transport + per-session auth BL-075 Done; streams synthetic-source PCM frames, tested in `backend/tests/ws.rs`). The device ends and codec remain hardware-in-the-loop: libopus `OpusCodec` (feature-gated native adapter, keeps the default aarch64 cross-build C-free), CPAL capture/playback (BL-070/074), and end-to-end latency (BL-078). **Frontend RX audio client (BL-072 In Progress):** the `TelemetryClient` now multiplexes spectrum (text) and audio (binary) on one authenticated socket (ADR-02); `audio-player.ts` parses binary frames, reorders them through a TS `JitterBuffer` (loss concealment), and plays PCM via Web Audio. Parse + jitter logic unit-tested; browser Opus decode + on-device playback + mic TX (BL-073) remain HIL.
 
 **Note — BL-060:** In Progress. The software targets are met — responsive layout, Canvas 2D waterfall (no WebGL), and MediaDevices-based device selection all implemented and unit-tested. Executing the full browser matrix (TC-COMPAT-01–07, TC-AUD-03/04 on Firefox/Chromium/Edge desktop + iOS Safari + Chrome Android) needs real devices and is the manual/HIL remainder.
 
@@ -176,7 +176,7 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 |---|---|---|---|---|---|---|---|---|
 | BL-070 | Implement Pi-side audio capture (CPAL) → Opus encode | Must | 3 | L | BL-025 | FR-AUD-01, FR-AUD-05 | TC-AUD-01 | Proposed |
 | BL-071 | Stream encoded audio to browser client over WSS | Must | 3 | M | BL-070, BL-021 | FR-AUD-01 | TC-AUD-01 | In Progress |
-| BL-072 | Browser-side Opus decode and audio playback | Must | 3 | M | BL-040 | FR-AUD-01 | TC-AUD-01 | Proposed |
+| BL-072 | Browser-side Opus decode and audio playback | Must | 3 | M | BL-040 | FR-AUD-01 | TC-AUD-01 | In Progress |
 | BL-073 | Browser-side mic capture and Opus encode | Must | 3 | M | BL-062 | FR-AUD-02 | TC-AUD-02 | Proposed |
 | BL-074 | Pi-side Opus decode and audio playback (CPAL) | Must | 3 | M | BL-073 | FR-AUD-02 | TC-AUD-02 | Proposed |
 | BL-075 | Per-session auth check on audio WebSocket channel | Must | 3 | S | BL-021, BL-071 | FR-AUTH-01, NFR-SEC-01 | TC-AUTH-01, TC-SEC-01 | Done |
@@ -262,6 +262,7 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.5.22 | 2026-07-05 | DC0SK | Frontend RX audio client (BL-072 In Progress): TelemetryClient multiplexes spectrum+audio; audio-player parses binary frames + jitter buffer + Web Audio. 35 frontend tests. |
 | 0.5.21 | 2026-07-05 | DC0SK | WS audio RX transport: BL-075 (per-session audio auth) → Done, BL-071 (stream audio over WS) → In Progress (authenticated binary audio frames from a synthetic source; codec/capture ends are HIL). |
 | 0.5.20 | 2026-07-05 | DC0SK | Ops/release docs: BL-012 (rotation policy), BL-082 (rollback), BL-105 (runbook), BL-106 (release checklist), BL-122 (license gate) → Done. BL-104 In Progress (final trace pending HIL). |
 | 0.5.19 | 2026-07-05 | DC0SK | Closed security remainders + TLS: BL-081 (0600 config check), BL-032 (panic sanitisation/NFR-SEC-09), BL-100/101 (nginx TLS proxy/NFR-SEC-01), BL-021 (auth) → Done. Deferral TC-SEC-01 now met by config. |

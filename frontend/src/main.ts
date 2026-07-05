@@ -15,9 +15,10 @@ import {
   setPtt,
   type RigMode,
 } from "./control.ts";
+import { AudioPlayer } from "./audio-player.ts";
 import { Session } from "./session.ts";
 import { browserSocket } from "./socket.ts";
-import { SpectrumClient } from "./spectrum-client.ts";
+import { TelemetryClient } from "./telemetry-client.ts";
 import { WaterfallRenderer } from "./waterfall.ts";
 
 const BASE_URL = (globalThis as { LANDLINE_API_BASE?: string }).LANDLINE_API_BASE ?? "";
@@ -30,7 +31,8 @@ const api = new ApiClient({
 const session = new Session();
 
 let pttActive = false;
-let spectrumClient: SpectrumClient | null = null;
+let telemetryClient: TelemetryClient | null = null;
+let audioPlayer: AudioPlayer | null = null;
 
 function wsUrl(): string {
   if (BASE_URL) {
@@ -42,7 +44,7 @@ function wsUrl(): string {
 
 function startTelemetry(): void {
   const tokens = session.current;
-  if (tokens === null || spectrumClient !== null) {
+  if (tokens === null || telemetryClient !== null) {
     return;
   }
   const context = byId<HTMLCanvasElement>("waterfall").getContext("2d");
@@ -50,19 +52,24 @@ function startTelemetry(): void {
     return;
   }
   const renderer = new WaterfallRenderer(context, { minDb: -90, maxDb: -10 });
-  spectrumClient = new SpectrumClient({
+  audioPlayer = new AudioPlayer(48_000);
+  audioPlayer.start();
+  telemetryClient = new TelemetryClient({
     url: wsUrl(),
     token: tokens.accessToken,
     connect: browserSocket,
     onFrame: (frame) => renderer.push(frame.bins),
+    onAudio: (frame) => audioPlayer?.push(frame),
     onError: (message) => showRigError(message),
   });
-  spectrumClient.start();
+  telemetryClient.start();
 }
 
 function stopTelemetry(): void {
-  spectrumClient?.stop();
-  spectrumClient = null;
+  telemetryClient?.stop();
+  telemetryClient = null;
+  audioPlayer?.stop();
+  audioPlayer = null;
 }
 
 function fillDeviceSelect(select: HTMLSelectElement, devices: AudioDevice[]): void {

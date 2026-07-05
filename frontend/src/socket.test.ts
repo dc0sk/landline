@@ -11,7 +11,7 @@ import {
 class FakeSocket implements WebSocketLike {
   onopen: (() => void) | null = null;
   onclose: (() => void) | null = null;
-  onmessage: ((event: { data: string }) => void) | null = null;
+  onmessage: ((event: { data: string | ArrayBuffer }) => void) | null = null;
   closed = false;
   sent: string[] = [];
 

@@ -1,8 +1,8 @@
 ---
 title: Roadmap and Release Plan
 status: Draft
-version: 0.5.2
-updated: 2026-07-04
+version: 0.5.3
+updated: 2026-07-05
 authors:
   - Simon Keimer (DC0SK)
 ---
@@ -115,16 +115,46 @@ Phase 4 ─── Release Candidate & Operations
 
 ### Exit Criteria
 
-- [ ] All TC-RIG-01–TC-RIG-09 (rig control) pass.
-- [ ] TC-GPIO-01 (GPIO digital I/O control on Raspberry Pi, minimum 5 pins) pass.
-- [ ] All TC-AUTH-01–TC-AUTH-05 (auth/session) pass.
-- [ ] All TC-SEC-01–TC-SEC-11 and TC-SEC-15 (security) pass.
-- [ ] TC-PERF-01 (control latency < 100 ms p95) pass on LAN.
-- [ ] TC-DEPLOY-01 and TC-DEPLOY-03 (Pi 4 deployment, systemd) pass.
-- [ ] Audit log verified: all rig-changing commands produce log entries with required fields.
-- [ ] No Must backlog items (BL-020–033, BL-040–047, BL-080–081, BL-083) remain open.
-- [ ] docs/requirements/system-requirements.md updated with any Phase 1 scope changes.
-- [ ] docs/test/test-strategy.md updated with Phase 1 test execution records.
+Legend: **[x]** met and verified · **[~]** software-complete, pending hardware-in-the-loop
+(HIL) or a later-phase dependency · **[ ]** not yet met.
+
+- [~] All TC-RIG-01–TC-RIG-09 (rig control) pass. — *Automated green against a mock rigctld (unit + HTTP integration). Real-radio confirmation is HIL (ASM-05); TC-RIG-06 continuous streaming is Phase 2.*
+- [ ] TC-GPIO-01 (GPIO digital I/O control on Raspberry Pi, minimum 5 pins) pass. — *HIL: the allowlist / safe-state logic is verified in-memory (TC-SEC-15); real-pin readback needs a Pi.*
+- [x] All TC-AUTH-01–TC-AUTH-05 (auth/session) pass. — *Automated green (unit + HTTP). The TC-AUTH-01 WebSocket variant lands with the Phase-2 WS transport; REST auth enforcement is verified.*
+- [~] All TC-SEC-01–TC-SEC-11 and TC-SEC-15 (security) pass. — *Green: TC-SEC-02/04/06/07/08/10/15. Deferred: TC-SEC-01 (TLS) is Phase 4; TC-SEC-05 (WS frame) & TC-SEC-11 (WS replay) are Phase 2; TC-SEC-03 (0600 perms) & TC-SEC-09 (global error sanitisation) have small in-app remainders.*
+- [ ] TC-PERF-01 (control latency < 100 ms p95) pass on LAN. — *HIL: needs a real deployment to measure.*
+- [~] TC-DEPLOY-01 and TC-DEPLOY-03 (Pi 4 deployment, systemd) pass. — *aarch64 release binary cross-builds (verified) and the hardened systemd unit is written; start/stop on a Pi is HIL.*
+- [x] Audit log verified: all rig-changing commands produce log entries with required fields. — *Automated: TC-AUDIT-01 asserts a set_freq command yields an entry with user/action/params; TC-AUDIT-02 covers auth-failure logging.*
+- [~] No Must backlog items (BL-020–033, BL-040–047, BL-080–081, BL-083) remain open. — *Open Must remainders, each with a scoped cause: BL-021 (NFR-SEC-01 TLS → Phase 4), BL-022 (WS frame cap → Phase 2), BL-032 (global error sanitisation), BL-081 (in-app 0600 config-permission check). All other Phase-1 Must items are Done.*
+- [x] docs/requirements/system-requirements.md updated with any Phase 1 scope changes. — *No Phase 1 scope changes occurred; requirements are stable.*
+- [x] docs/test/test-strategy.md updated with Phase 1 test execution records. — *See test-strategy §Phase 1 execution record.*
+
+### Phase 1 exit assessment (2026-07-05)
+
+**Position: software-complete; the exit gate is NOT yet fully cleared — no-go for formal
+Phase 1 sign-off pending hardware-in-the-loop (HIL) validation.**
+
+All Phase 1 build actions (A1–A26) are implemented and green under the automated suite —
+55 Rust tests + 22 frontend tests, Clippy pedantic clean, traceability gate green. Auth/RBAC,
+security middleware, audit, rig control, and GPIO logic are verified by unit and
+HTTP-integration tests (rigctld and GPIO behind mocks). The security-first ordering held:
+authentication, RBAC, rate limiting, CORS, and audit landed before feature work.
+
+The gate is not fully cleared because several criteria need validation this environment cannot
+provide:
+
+- **Hardware-in-the-loop** — a real Raspberry Pi 4/5 + rigctld + transceiver for TC-GPIO-01,
+  TC-PERF-01, TC-DEPLOY-01/03, TC-REL-02, and real-radio confirmation of the rig TCs (ASM-05).
+- **Browser matrix** — Firefox / Chromium / mobile E2E (TC-COMPAT-*).
+- **Phase-4 dependency** — TLS/WSS enforcement (TC-SEC-01) is delivered by the reverse proxy
+  in Phase 4.
+- **Small in-app remainders** — 0600 config-permission check (BL-081) and global
+  error-response sanitisation (BL-032 / NFR-SEC-09).
+
+**Recommended action:** treat Phase 1 as development-complete and proceed with hardware
+procurement / HIL test execution and the Phase-4 TLS front end; close the formal Phase 1 gate
+once the HIL and browser-matrix execution records are captured. No scope or security
+regressions were introduced.
 
 ### Risks
 
@@ -268,6 +298,7 @@ At Phase 4 exit:
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.5.3 | 2026-07-05 | DC0SK | Phase 1 exit review (A27): reconciled §5 exit criteria against the automated suite (met / software-complete-pending-HIL / not met) and recorded a dated exit assessment — software-complete, formal gate pending hardware-in-the-loop + Phase-4 TLS. |
 | 0.5.2 | 2026-07-04 | DC0SK | Ticked all Phase 0 exit criteria (verified against existing docs) and recorded Phase 0 as complete / ready for Phase 1 entry. |
 | 0.5.1 | 2026-06-26 | DC0SK | Migrated to area-coded FR/NFR/TC ids and new doc-tree frontmatter. |
 | 0.5.0 | 2026-05-13 | — | Added GPIO security test gate (TC-SEC-15) to Phase 1 exit criteria |

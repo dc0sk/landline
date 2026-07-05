@@ -1,7 +1,7 @@
 ---
 title: Action List
 status: Draft
-version: "0.12"
+version: "0.13"
 updated: 2026-07-05
 authors:
   - Simon Keimer (DC0SK)
@@ -40,9 +40,13 @@ License notice: This project is licensed under AGPL-3.0-only. See the top-level 
   TypeScript project + authenticated session bootstrap, verified with typecheck + 11 tests +
   build), A20–A21 (WS client + frequency UI), and A22–A24 (mode selector, PTT button,
   S-meter display) have landed (22 frontend tests). The full rig-control UI is now wired
-  over the REST API, with responsive CSS (A25) and a hardened systemd unit (A26). **Only the
-  Phase 1 exit review (A27) remains** — reconcile roadmap §5 exit criteria against what is
-  built vs. what needs real hardware (Pi/rigctld System tests, browser-matrix E2E).
+  over the REST API, with responsive CSS (A25) and a hardened systemd unit (A26).
+  **Phase 1 (A1–A27) is development-complete.** The A27 exit review recorded the honest
+  position: software-complete and green under automation (55 Rust + 22 frontend tests), with
+  the formal exit gate held pending hardware-in-the-loop validation (Pi + rigctld + browser
+  matrix) and the Phase-4 TLS front end. Beyond that, work continues into **Phase 2**
+  (spectrum/waterfall + the WebSocket telemetry channel — where the WS-dependent deferrals
+  above land) per roadmap §6.
 - Open Phase 0 remainder: secrets *rotation* policy (BL-012) is deferred to before production
   release — tracked below under Phase 4 preparation.
 
@@ -84,7 +88,7 @@ Frontend bootstrap can start in parallel once the auth contract (A6) is stable.
 - [x] A24. Implement S-meter display — BL-045 · FR-RIG-06 · TC-RIG-06 — *done: `control.ts` getSmeter + `<output>` polled every 1 s while signed in (continuous streaming rides the Phase-2 WS channel)*
 - [x] A25. Responsive CSS layout (desktop 3-column, mobile vertical stack) — BL-047 · NFR-COMPAT-03–NFR-COMPAT-06 · TC-COMPAT-04–TC-COMPAT-07 — *done: `styles.css` — mobile-first 1-col → 3-col grid at ≥700px, 44px touch targets (NFR-COMPAT-06), light/dark via `prefers-color-scheme`, PTT transmit colour. Browser-matrix E2E (TC-COMPAT-04–07) is manual/hardware*
 - [x] A26. Write systemd service unit (start/stop/restart, resource limits) — BL-080 · NFR-DEPLOY-02 · TC-DEPLOY-03 — *done: `deploy/systemd/landline.service` — hardened (unprivileged, empty caps, read-only root, syscall allowlist, private state dir for the audit log, MemoryMax/TasksMax) + `deploy/README.md`. TC-DEPLOY-03 (start/stop on Pi) is a hardware System test*
-- [ ] A27. Phase 1 exit review: run all scoped TC-RIG/TC-GPIO/TC-AUTH/TC-SEC/TC-PERF-01/TC-DEPLOY gates and tick roadmap.md §5 exit criteria — roadmap §5 · docs updated per governance change control
+- [x] A27. Phase 1 exit review: run all scoped TC-RIG/TC-GPIO/TC-AUTH/TC-SEC/TC-PERF-01/TC-DEPLOY gates and tick roadmap.md §5 exit criteria — roadmap §5 · docs updated per governance change control — *done: reconciled §5 exit criteria (met / software-complete-pending-HIL / not met) + dated exit assessment in roadmap.md; Phase 1 execution record in test-strategy.md §6a. **Position: software-complete; formal gate held pending HIL (Pi + rigctld + browser matrix) and the Phase-4 TLS front end.***
 
 ## 4. Milestone: Phase 2 — spectrum, waterfall, mobile (forward-looking)
 
@@ -123,6 +127,7 @@ updated). In addition:
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.13 | 2026-07-05 | DC0SK | Marked A27 done: Phase 1 exit review — reconciled roadmap §5 exit criteria + test-strategy execution record. Phase 1 development-complete; formal gate pending HIL + Phase-4 TLS. |
 | 0.12 | 2026-07-05 | DC0SK | Marked A25–A26 done: responsive CSS layout (mobile→3-col, touch, light/dark) and hardened systemd unit + deploy README. Only A27 (Phase 1 exit review) remains. |
 | 0.11 | 2026-07-05 | DC0SK | Marked A22–A24 done: mode selector, PTT button (transmit indicator), S-meter display. Full rig-control UI wired; 22 frontend tests. Next action A25 (responsive CSS). |
 | 0.10 | 2026-07-05 | DC0SK | Marked A20–A21 done: reconnecting WS client (backoff, NFR-REL-01) + frequency display/tuning UI over REST. 18 frontend tests. Next action A22–A24. |

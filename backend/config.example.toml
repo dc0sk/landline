@@ -76,3 +76,12 @@ sample_rate_hz = 48000
 update_rate_hz = 5
 # Nominal centre frequency reported with each frame (Hz).
 center_hz = 0
+
+[audio]
+# Audio pipeline (ARC-05). sample_rate/frame define framing; bitrate is the Opus
+# target (FR-AUD-05); jitter_* size the reorder/loss-concealment buffer (FR-AUD-06).
+sample_rate_hz = 48000
+frame_ms = 20
+bitrate_bps = 16000
+jitter_target_frames = 3
+jitter_max_frames = 10

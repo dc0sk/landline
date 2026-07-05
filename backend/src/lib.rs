@@ -15,6 +15,7 @@
 //! - [`config`] — ARC-09 (single-file TOML config loader)
 //! - [`telemetry`] — ARC-01 Tracing initialisation
 
+pub mod audio;
 pub mod audit;
 pub mod auth;
 pub mod config;

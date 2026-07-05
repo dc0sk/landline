@@ -1,7 +1,7 @@
 ---
 title: Action List
 status: Draft
-version: "0.17"
+version: "0.18"
 updated: 2026-07-05
 authors:
   - Simon Keimer (DC0SK)
@@ -52,9 +52,11 @@ License notice: This project is licensed under AGPL-3.0-only. See the top-level 
   selector (MediaDevices) + touch refinements. **Phase 2 is complete** (A28–A30; 29 frontend +
   62 Rust tests). The **Phase 2 exit review** reconciled roadmap §6 (met / software-complete-
   pending-browser+HIL / not met) with a dated assessment and a test-strategy §6b execution
-  record: software-complete, formal gate pending browser-matrix + Pi HIL. **Next milestone:
-  Phase 3** — the audio pipeline (Opus RX/TX over WSS) + container evaluation + split-host,
-  per roadmap §7 (backlog EP-07/09/11, action items A31–A34).
+  record: software-complete, formal gate pending browser-matrix + Pi HIL. **Phase 3 has started
+  (A31, in progress):** the ARC-05 audio software core — jitter buffer (loss concealment) +
+  codec seam + config — is done and unit-tested, C-free cross-build preserved. The native/HIL
+  parts (libopus, CPAL, WS audio transport, browser Web Audio) are the remainder. Phase 3 also
+  covers container evaluation (A33) and split-host (A34) per roadmap §7.
 - Open Phase 0 remainder: secrets *rotation* policy (BL-012) is deferred to before production
   release — tracked below under Phase 4 preparation.
 
@@ -104,9 +106,9 @@ Frontend bootstrap can start in parallel once the auth contract (A6) is stable.
 - [x] A29. Canvas 2D waterfall renderer; verify on iOS Safari (no WebGL) — BL-052, BL-053 · FR-SPEC-03 · TC-SPEC-03–TC-SPEC-04 — *done: ARC-12 `waterfall.ts` — scrolling Canvas 2D waterfall (no WebGL → iOS-Safari-safe), pure normalise/palette/row logic unit-tested; `spectrum-client.ts` wires the reconnecting socket through the auth→subscribe handshake to the renderer. 5 unit tests. On-device iOS-Safari confirmation (TC-SPEC-04) is a browser-matrix run (BL-053)*
 - [x] A30. Full browser matrix validation, touch optimisation, audio device selector UI — BL-060–BL-062 · NFR-COMPAT-01–NFR-COMPAT-07, FR-AUD-03–FR-AUD-04 · TC-COMPAT-01–TC-COMPAT-07, TC-AUD-03–TC-AUD-04 — *done (software): `audio-devices.ts` — MediaDevices enumeration (NFR-COMPAT-07) partitioned into input/output selectors with permission-unlock + labelled fallbacks (FR-AUD-03/04); touch refinements (16px font vs iOS zoom, `touch-action: manipulation`, full-width mobile controls, NFR-COMPAT-06). 2 unit tests. Full browser-matrix validation (TC-COMPAT-*, TC-AUD-03/04 on real devices) is the manual/HIL remainder (BL-060)*
 
-## 5. Milestone: Phase 3 — audio, container evaluation, split-host (forward-looking)
+## 5. Milestone: Phase 3 — audio, container evaluation, split-host
 
-- [ ] A31. Bidirectional Opus audio pipeline over WSS with per-session auth — BL-070–BL-077 · FR-AUD-01–FR-AUD-06, NFR-SEC-01 · TC-AUD-01–TC-AUD-06
+- [ ] A31. Bidirectional Opus audio pipeline over WSS with per-session auth — BL-070–BL-077 · FR-AUD-01–FR-AUD-06, NFR-SEC-01 · TC-AUD-01–TC-AUD-06 — *in progress — software core done: ARC-05 `audio` module — `JitterBuffer` (reorder + graceful loss concealment, FR-AUD-06) + `Codec` seam with `PcmCodec` (FR-AUD-05) + `[audio]` config. 5 unit tests; aarch64 cross-build stays C-free. Remaining (native/HIL): libopus `OpusCodec` (feature-gated), CPAL capture/playback on the Pi, the WS binary audio transport + per-session auth, and browser Web Audio playback/mic — all validated hardware-in-the-loop*
 - [ ] A32. Measure/document end-to-end audio latency on Pi 4 — BL-078 · NFR-PERF-02 · TC-PERF-02
 - [ ] A33. Container evaluation (Dockerfile, compose, device passthrough, latency benchmark, decision record) — BL-090–BL-095 · NFR-DEPLOY-03, NFR-SEC-10 · TC-DEPLOY-04–TC-DEPLOY-05
 - [ ] A34. Split-host topology + WireGuard/Tailscale profiles, SSH fallback docs, frontend runtime endpoint config — BL-110–BL-114 · FR-HOST-01–FR-HOST-04, NFR-SEC-13–NFR-SEC-15 · TC-HOST-01–TC-HOST-03, TC-SEC-12–TC-SEC-14
@@ -135,6 +137,7 @@ updated). In addition:
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.18 | 2026-07-05 | DC0SK | Phase 3 started (A31 in progress): ARC-05 audio software core — jitter buffer (loss concealment) + codec seam + config, C-free. 67 Rust tests. Native/HIL audio parts remain. |
 | 0.17 | 2026-07-05 | DC0SK | Phase 2 exit review: reconciled roadmap §6 exit criteria + test-strategy §6b execution record. Phase 2 development-complete; gate pending browser-matrix + Pi HIL. Next milestone Phase 3 (audio). |
 | 0.16 | 2026-07-05 | DC0SK | Marked A30 done: audio device selector (MediaDevices) + touch refinements. Phase 2 development-complete; next is the Phase 2 exit review. |
 | 0.15 | 2026-07-05 | DC0SK | Marked A29 done: ARC-12 Canvas 2D waterfall (no WebGL) + spectrum-client handshake over the reconnecting socket. 27 frontend tests. Next A30 (browser matrix + audio device selector). |

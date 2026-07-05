@@ -9,6 +9,8 @@
 //! - [`security`] — ARC-03 (rate limiting, body-size limit, CORS)
 //! - [`rig`] — ARC-04 (hamlib/rigctld adapter + command validation)
 //! - [`gpio`] — ARC-08 (allowlisted GPIO control)
+//! - [`spectrum`] — ARC-06 (FFT pipeline + sample source)
+//! - [`ws`] — ARC-01 (authenticated WebSocket telemetry transport)
 //! - [`audit`] — ARC-07 (tamper-evident audit log)
 //! - [`config`] — ARC-09 (single-file TOML config loader)
 //! - [`telemetry`] — ARC-01 Tracing initialisation
@@ -21,11 +23,14 @@ pub mod gpio;
 pub mod rig;
 pub mod routes;
 pub mod security;
+pub mod spectrum;
 pub mod telemetry;
+pub mod ws;
 
 use std::sync::Arc;
 use std::time::Duration;
 
+use axum::routing::get;
 use axum::{middleware, Extension, Router};
 use tower_http::limit::RequestBodyLimitLayer;
 use tower_http::trace::TraceLayer;
@@ -36,6 +41,8 @@ use crate::config::Config;
 use crate::gpio::GpioController;
 use crate::rig::{PttGuard, RigAdapter};
 use crate::security::RateLimiter;
+use crate::spectrum::{SampleSource, SpectrumAnalyzer, SyntheticSource};
+use crate::ws::SpectrumRuntime;
 
 /// Build the top-level Axum application (ARC-01).
 ///
@@ -55,6 +62,23 @@ pub fn app(config: &Config) -> Router {
         Duration::from_secs(config.rig.ptt_timeout_secs),
     ));
     let gpio = Arc::new(GpioController::from_config(&config.gpio));
+    // Synthetic tone at 1/8 of the sample rate (small integer → exact in f32).
+    #[allow(clippy::cast_precision_loss)]
+    let tone_hz = config.spectrum.sample_rate_hz as f32 / 8.0;
+    let source: Arc<dyn SampleSource> = Arc::new(SyntheticSource::new(
+        config.spectrum.sample_rate_hz,
+        tone_hz,
+    ));
+    let spectrum = Arc::new(SpectrumRuntime {
+        analyzer: Arc::new(SpectrumAnalyzer::new(config.spectrum.fft_size)),
+        source,
+        update_rate_hz: config.spectrum.update_rate_hz,
+        fft_size: config.spectrum.fft_size,
+        sample_rate: config.spectrum.sample_rate_hz,
+        center_hz: config.spectrum.center_hz,
+        max_frame_bytes: config.security.max_body_bytes,
+        auth_timeout: Duration::from_secs(5),
+    });
     let limiter = Arc::new(RateLimiter::new(config.security.rate_limit_per_sec));
 
     // Rate limiting guards the auth + protected API surface (not liveness).
@@ -62,6 +86,7 @@ pub fn app(config: &Config) -> Router {
         .merge(audit::router())
         .merge(control::router())
         .merge(gpio::router())
+        .route("/ws", get(ws::handler))
         .layer(middleware::from_fn_with_state(
             limiter,
             security::rate_limit,
@@ -74,6 +99,7 @@ pub fn app(config: &Config) -> Router {
         .layer(Extension(rig))
         .layer(Extension(ptt))
         .layer(Extension(gpio))
+        .layer(Extension(spectrum))
         .layer(security::cors_layer(&config.security.allowed_origins))
         .layer(RequestBodyLimitLayer::new(config.security.max_body_bytes))
         .layer(TraceLayer::new_for_http())

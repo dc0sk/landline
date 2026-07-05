@@ -1,7 +1,7 @@
 ---
 title: Action List
 status: Draft
-version: "0.13"
+version: "0.14"
 updated: 2026-07-05
 authors:
   - Simon Keimer (DC0SK)
@@ -44,9 +44,11 @@ License notice: This project is licensed under AGPL-3.0-only. See the top-level 
   **Phase 1 (A1–A27) is development-complete.** The A27 exit review recorded the honest
   position: software-complete and green under automation (55 Rust + 22 frontend tests), with
   the formal exit gate held pending hardware-in-the-loop validation (Pi + rigctld + browser
-  matrix) and the Phase-4 TLS front end. Beyond that, work continues into **Phase 2**
-  (spectrum/waterfall + the WebSocket telemetry channel — where the WS-dependent deferrals
-  above land) per roadmap §6.
+  matrix) and the Phase-4 TLS front end. **Phase 2 has started (A28):** the backend spectrum
+  path — FFT pipeline + authenticated WebSocket transport streaming spectrum frames — is done
+  and tested (62 Rust tests), which also lands the Phase-1-deferred WS security items
+  (TC-AUTH-01 WS auth, TC-SEC-05 WS frame limit). **Next: A29** — the browser Canvas waterfall
+  renderer consuming that stream.
 - Open Phase 0 remainder: secrets *rotation* policy (BL-012) is deferred to before production
   release — tracked below under Phase 4 preparation.
 
@@ -90,9 +92,9 @@ Frontend bootstrap can start in parallel once the auth contract (A6) is stable.
 - [x] A26. Write systemd service unit (start/stop/restart, resource limits) — BL-080 · NFR-DEPLOY-02 · TC-DEPLOY-03 — *done: `deploy/systemd/landline.service` — hardened (unprivileged, empty caps, read-only root, syscall allowlist, private state dir for the audit log, MemoryMax/TasksMax) + `deploy/README.md`. TC-DEPLOY-03 (start/stop on Pi) is a hardware System test*
 - [x] A27. Phase 1 exit review: run all scoped TC-RIG/TC-GPIO/TC-AUTH/TC-SEC/TC-PERF-01/TC-DEPLOY gates and tick roadmap.md §5 exit criteria — roadmap §5 · docs updated per governance change control — *done: reconciled §5 exit criteria (met / software-complete-pending-HIL / not met) + dated exit assessment in roadmap.md; Phase 1 execution record in test-strategy.md §6a. **Position: software-complete; formal gate held pending HIL (Pi + rigctld + browser matrix) and the Phase-4 TLS front end.***
 
-## 4. Milestone: Phase 2 — spectrum, waterfall, mobile (forward-looking)
+## 4. Milestone: Phase 2 — spectrum, waterfall, mobile
 
-- [ ] A28. FFT pipeline + spectrum WebSocket stream at configurable rate — BL-050, BL-051, BL-054 · FR-SPEC-01–FR-SPEC-02 · TC-SPEC-01–TC-SPEC-02
+- [x] A28. FFT pipeline + spectrum WebSocket stream at configurable rate — BL-050, BL-051, BL-054 · FR-SPEC-01–FR-SPEC-02 · TC-SPEC-01–TC-SPEC-02 — *done: ARC-06 `spectrum` module (rustfft, Hann window, dB bins, `SampleSource` seam + synthetic source) + ARC-01 `ws` module — authenticated WebSocket (first-message JWT auth, TC-AUTH-01; frame-size caps, NFR-SEC-05/TC-SEC-05) streaming spectrum frames at the configured 1–10 Hz rate. 4 FFT unit + 3 WS integration tests (real server + client). Real audio source is Phase 3; the Canvas renderer is A29*
 - [ ] A29. Canvas 2D waterfall renderer; verify on iOS Safari (no WebGL) — BL-052, BL-053 · FR-SPEC-03 · TC-SPEC-03–TC-SPEC-04
 - [ ] A30. Full browser matrix validation, touch optimisation, audio device selector UI — BL-060–BL-062 · NFR-COMPAT-01–NFR-COMPAT-07, FR-AUD-03–FR-AUD-04 · TC-COMPAT-01–TC-COMPAT-07, TC-AUD-03–TC-AUD-04
 
@@ -127,6 +129,7 @@ updated). In addition:
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.14 | 2026-07-05 | DC0SK | Phase 2 started — marked A28 done: ARC-06 FFT pipeline + ARC-01 authenticated WebSocket transport streaming spectrum (also lands deferred WS auth/frame-limit items). 62 Rust tests. Next A29 (Canvas waterfall). |
 | 0.13 | 2026-07-05 | DC0SK | Marked A27 done: Phase 1 exit review — reconciled roadmap §5 exit criteria + test-strategy execution record. Phase 1 development-complete; formal gate pending HIL + Phase-4 TLS. |
 | 0.12 | 2026-07-05 | DC0SK | Marked A25–A26 done: responsive CSS layout (mobile→3-col, touch, light/dark) and hardened systemd unit + deploy README. Only A27 (Phase 1 exit review) remains. |
 | 0.11 | 2026-07-05 | DC0SK | Marked A22–A24 done: mode selector, PTT button (transmit indicator), S-meter display. Full rig-control UI wired; 22 frontend tests. Next action A25 (responsive CSS). |

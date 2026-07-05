@@ -66,3 +66,13 @@ enabled = false
 # pin = 17
 # direction = "out"
 # safe_state = "low"
+
+[spectrum]
+# FFT size (samples per frame); output bins = fft_size / 2 (ARC-06).
+fft_size = 1024
+# Source sample rate in Hz.
+sample_rate_hz = 48000
+# Spectrum frame rate in Hz; clamped to 1-10 (FR-SPEC-02, NFR-PERF-05 needs >= 2).
+update_rate_hz = 5
+# Nominal centre frequency reported with each frame (Hz).
+center_hz = 0

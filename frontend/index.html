@@ -30,7 +30,29 @@
           <span id="who"></span>
           <button id="logout" type="button">Sign out</button>
         </header>
-        <p>Rig control UI arrives in actions A21–A25 (frequency, mode, PTT, S-meter).</p>
+
+        <section id="rig-panel">
+          <div>
+            <span>Frequency (Hz):</span>
+            <output id="freq-display">—</output>
+          </div>
+          <form id="freq-form">
+            <label
+              >Set frequency
+              <input
+                id="freq-input"
+                type="number"
+                min="1"
+                step="1"
+                inputmode="numeric"
+                required
+            /></label>
+            <button type="submit">Set</button>
+          </form>
+          <p id="rig-error" role="alert"></p>
+        </section>
+
+        <p>Mode, PTT and S-meter controls arrive in actions A22–A24.</p>
       </section>
     </main>
     <script type="module" src="./dist/main.js"></script>

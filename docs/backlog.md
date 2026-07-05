@@ -1,8 +1,8 @@
 ---
 title: Product Backlog
 status: Draft
-version: 0.5.10
-updated: 2026-07-04
+version: 0.5.11
+updated: 2026-07-05
 authors:
   - Simon Keimer (DC0SK)
 ---
@@ -124,11 +124,11 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 |---|---|---|---|---|---|---|---|---|
 | BL-040 | Initialize TypeScript/HTML5 frontend project | Must | 1 | S | BL-021 | NFR-COMPAT-01–NFR-COMPAT-02 | — | Done |
 | BL-041 | Implement authenticated session bootstrap (login, token storage, logout) | Must | 1 | M | BL-040, BL-021 | FR-AUTH-01–FR-AUTH-05 | TC-AUTH-01–TC-AUTH-05 | Done |
-| BL-042 | Implement frequency display and tuning control | Must | 1 | M | BL-040, BL-026 | FR-RIG-01–FR-RIG-02, NFR-COMPAT-06 | TC-RIG-01–TC-RIG-02, TC-COMPAT-01–TC-COMPAT-02 | Proposed |
+| BL-042 | Implement frequency display and tuning control | Must | 1 | M | BL-040, BL-026 | FR-RIG-01–FR-RIG-02, NFR-COMPAT-06 | TC-RIG-01–TC-RIG-02, TC-COMPAT-01–TC-COMPAT-02 | Done |
 | BL-043 | Implement mode selector | Must | 1 | S | BL-040, BL-027 | FR-RIG-03–FR-RIG-04 | TC-RIG-03 | Proposed |
 | BL-044 | Implement PTT button with visual transmit indicator | Must | 1 | S | BL-040, BL-028 | FR-RIG-05 | TC-RIG-04 | Proposed |
 | BL-045 | Implement S-meter display | Should | 1 | S | BL-040, BL-029 | FR-RIG-06 | TC-RIG-06 | Proposed |
-| BL-046 | Implement WebSocket client with reconnect/backoff | Must | 1 | M | BL-040 | NFR-REL-01 | TC-REL-01 | Proposed |
+| BL-046 | Implement WebSocket client with reconnect/backoff | Must | 1 | M | BL-040 | NFR-REL-01 | TC-REL-01 | Done |
 | BL-047 | Responsive CSS layout (desktop 3-column, mobile vertical stack) | Must | 1 | M | BL-040 | NFR-COMPAT-03–NFR-COMPAT-06 | TC-COMPAT-04–TC-COMPAT-07 | Proposed |
 
 ---
@@ -248,6 +248,7 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.5.11 | 2026-07-05 | DC0SK | BL-046 (WS client reconnect/backoff, NFR-REL-01) + BL-042 (frequency display/tuning) → Done. Frontend now at 18 unit tests. |
 | 0.5.10 | 2026-07-04 | DC0SK | BL-040 (TS frontend project) + BL-041 (session bootstrap) → Done: ARC-10 frontend started — typed API/session/backoff modules, login UI, 11 tests, CI frontend job. |
 | 0.5.9 | 2026-07-04 | DC0SK | BL-031 (circuit breaker) + BL-033 (GPIO, ARC-08) → Done; BL-029 (S-meter) → In Progress (read path; streaming rides Phase-2 WS). Phase 1 backend complete. |
 | 0.5.8 | 2026-07-04 | DC0SK | BL-026/027/028 (freq/mode/PTT handlers) + BL-030 (rig mutex) → Done; BL-024 (audit) → Done (rig-action auditing now verified, TC-AUDIT-01). Rig control endpoints RBAC-gated + audited; PTT safety timeout (NFR-SEC-07). |

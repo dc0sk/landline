@@ -4,6 +4,7 @@
 // lives in api.ts / session.ts / backoff.ts.
 
 import { ApiClient } from "./api.ts";
+import { getFrequency, setFrequency } from "./control.ts";
 import { Session } from "./session.ts";
 
 const BASE_URL = (globalThis as { LANDLINE_API_BASE?: string }).LANDLINE_API_BASE ?? "";
@@ -34,6 +35,44 @@ function render(): void {
   const tokens = session.current;
   if (tokens !== null) {
     byId("who").textContent = `Signed in as ${tokens.role}`;
+    void refreshFrequency();
+  }
+}
+
+function showRigError(message: string): void {
+  byId("rig-error").textContent = message;
+}
+
+async function refreshFrequency(): Promise<void> {
+  const tokens = session.current;
+  if (tokens === null) {
+    return;
+  }
+  try {
+    const hz = await getFrequency(api, tokens.accessToken);
+    byId("freq-display").textContent = hz.toLocaleString();
+  } catch {
+    byId("freq-display").textContent = "unavailable";
+  }
+}
+
+async function handleSetFrequency(event: SubmitEvent): Promise<void> {
+  event.preventDefault();
+  showRigError("");
+  const tokens = session.current;
+  if (tokens === null) {
+    return;
+  }
+  const hz = Number.parseInt(byId<HTMLInputElement>("freq-input").value, 10);
+  if (!Number.isFinite(hz)) {
+    showRigError("Enter a frequency in Hz.");
+    return;
+  }
+  try {
+    await setFrequency(api, tokens.accessToken, hz);
+    await refreshFrequency();
+  } catch {
+    showRigError("Could not set frequency (out of range or rig unavailable).");
   }
 }
 
@@ -83,6 +122,9 @@ function main(): void {
   });
   byId<HTMLButtonElement>("logout").addEventListener("click", () => {
     void handleLogout();
+  });
+  byId<HTMLFormElement>("freq-form").addEventListener("submit", (event) => {
+    void handleSetFrequency(event);
   });
   window.setInterval(() => {
     void maybeRefresh();

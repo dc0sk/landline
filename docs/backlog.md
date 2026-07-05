@@ -1,7 +1,7 @@
 ---
 title: Product Backlog
 status: Draft
-version: 0.5.13
+version: 0.5.14
 updated: 2026-07-05
 authors:
   - Simon Keimer (DC0SK)
@@ -95,7 +95,7 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 |---|---|---|---|---|---|---|---|---|
 | BL-020 | Initialize Rust workspace: Tokio + Axum + Tower | Must | 1 | S | BL-011 | NFR-MAINT-01 | — | Done |
 | BL-021 | Implement auth middleware (JWT, expiry, role claims) | Must | 1 | M | BL-020, BL-012 | FR-AUTH-01–FR-AUTH-05, NFR-SEC-01–NFR-SEC-02 | TC-AUTH-01–TC-AUTH-05, TC-SEC-01–TC-SEC-02 | In Progress |
-| BL-022 | Implement rate limiting and frame/size limits | Must | 1 | S | BL-021 | NFR-SEC-04–NFR-SEC-05 | TC-SEC-04–TC-SEC-05 | In Progress |
+| BL-022 | Implement rate limiting and frame/size limits | Must | 1 | S | BL-021 | NFR-SEC-04–NFR-SEC-05 | TC-SEC-04–TC-SEC-05 | Done |
 | BL-023 | Implement CORS origin policy | Must | 1 | S | BL-021 | NFR-SEC-06 | TC-SEC-06 | Done |
 | BL-024 | Implement audit log subsystem | Must | 1 | M | BL-020 | FR-AUDIT-01–FR-AUDIT-04 | TC-AUDIT-01–TC-AUDIT-02 | Done |
 | BL-025 | Implement rigctld TCP adapter with command sanitisation | Must | 1 | M | BL-020 | FR-RIG-08–FR-RIG-09 | TC-RIG-07–TC-RIG-08 | Done |
@@ -114,7 +114,7 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 
 **Note — BL-024:** Done. The ARC-07 audit subsystem (SHA-256 hash-chained tamper-evident events, durable append file, Admin `GET /api/audit`) logs auth failures (FR-AUDIT-04 / TC-AUDIT-02) and rig state-changes via the control handlers (FR-AUDIT-01 / TC-AUDIT-01, verified). FR-AUDIT-03 30-day retention (TC-AUDIT-03) is enforced by deployment log rotation.
 
-**Note — BL-022:** In Progress. Per-client rate limiting (NFR-SEC-04) and the HTTP request body-size limit are implemented in the ARC-03 security middleware. The WebSocket **frame**-size cap (NFR-SEC-05 / TC-SEC-05) is deferred until the WS endpoints land (spectrum/audio, Phase 2/3); rate-limit keying on `X-Forwarded-For` behind the reverse proxy is a Phase-4 follow-up (BL-100/101).
+**Note — BL-022:** Done. Per-client rate limiting (NFR-SEC-04) and the HTTP request body-size limit (ARC-03) plus the WebSocket **frame**-size cap (NFR-SEC-05 / TC-SEC-05, enforced on the ARC-01 WS upgrade in Phase 2) are all implemented. Remaining hardening: rate-limit keying on `X-Forwarded-For` behind the reverse proxy is a Phase-4 follow-up (BL-100/101).
 
 ---
 
@@ -137,11 +137,11 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 
 | ID | Title | Priority | Phase | Est. | Deps | Req IDs | Test IDs | Status |
 |---|---|---|---|---|---|---|---|---|
-| BL-050 | Implement FFT pipeline (rustfft) on audio capture thread | Must | 2 | M | BL-025 | FR-SPEC-01 | TC-SPEC-01 | Proposed |
-| BL-051 | Stream FFT bin data to clients over WebSocket at configurable rate | Must | 2 | M | BL-050, BL-021 | FR-SPEC-01–FR-SPEC-02 | TC-SPEC-01–TC-SPEC-02 | Proposed |
+| BL-050 | Implement FFT pipeline (rustfft) on audio capture thread | Must | 2 | M | BL-025 | FR-SPEC-01 | TC-SPEC-01 | Done |
+| BL-051 | Stream FFT bin data to clients over WebSocket at configurable rate | Must | 2 | M | BL-050, BL-021 | FR-SPEC-01–FR-SPEC-02 | TC-SPEC-01–TC-SPEC-02 | Done |
 | BL-052 | Implement Canvas 2D waterfall renderer in frontend | Must | 2 | M | BL-040, BL-051 | FR-SPEC-03 | TC-SPEC-03 | Proposed |
 | BL-053 | Verify waterfall rendering on iOS Safari (no WebGL requirement) | Must | 2 | S | BL-052 | FR-SPEC-03 | TC-SPEC-04 | Proposed |
-| BL-054 | Add spectrum update rate configuration option | Should | 2 | S | BL-051 | FR-SPEC-02 | TC-SPEC-02 | Proposed |
+| BL-054 | Add spectrum update rate configuration option | Should | 2 | S | BL-051 | FR-SPEC-02 | TC-SPEC-02 | Done |
 | BL-055 | Add colour palette selector for waterfall | Could | 2 | S | BL-052 | FR-SPEC-04 | — | Proposed |
 
 ---
@@ -248,6 +248,7 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.5.14 | 2026-07-05 | DC0SK | Phase 2 start: BL-050/051/054 (FFT + spectrum WS stream) → Done; BL-022 (frame/size limits) → Done (WS frame cap now enforced on the ARC-01 WS transport). |
 | 0.5.13 | 2026-07-05 | DC0SK | BL-047 (responsive CSS) + BL-080 (systemd unit) → Done. All Phase 1 build actions complete; only the exit review (A27) remains. |
 | 0.5.12 | 2026-07-05 | DC0SK | BL-043 (mode selector) + BL-044 (PTT button) + BL-045 (S-meter display) → Done. Full rig-control UI wired; 22 frontend tests. |
 | 0.5.11 | 2026-07-05 | DC0SK | BL-046 (WS client reconnect/backoff, NFR-REL-01) + BL-042 (frequency display/tuning) → Done. Frontend now at 18 unit tests. |

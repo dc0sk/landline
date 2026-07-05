@@ -30,6 +30,33 @@ pub struct Config {
     pub rig: RigConfig,
     /// GPIO settings (ARC-08).
     pub gpio: GpioConfig,
+    /// Spectrum/FFT + WebSocket telemetry settings (ARC-06).
+    pub spectrum: SpectrumConfig,
+}
+
+/// Spectrum/FFT and WebSocket telemetry configuration (ARC-06).
+#[derive(Debug, Clone, Deserialize)]
+#[serde(default)]
+pub struct SpectrumConfig {
+    /// FFT size (bins in = samples per frame); output is `fft_size / 2` bins.
+    pub fft_size: usize,
+    /// Nominal sample rate of the source in Hz.
+    pub sample_rate_hz: u32,
+    /// Spectrum frame rate in Hz; clamped to 1–10 (FR-SPEC-02, NFR-PERF-05).
+    pub update_rate_hz: f32,
+    /// Nominal centre frequency reported with each frame, in Hz.
+    pub center_hz: u64,
+}
+
+impl Default for SpectrumConfig {
+    fn default() -> Self {
+        Self {
+            fft_size: 1024,
+            sample_rate_hz: 48_000,
+            update_rate_hz: 5.0,
+            center_hz: 0,
+        }
+    }
 }
 
 /// Rig adapter configuration (ARC-04): how to reach hamlib/rigctld.

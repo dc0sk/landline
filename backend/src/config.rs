@@ -401,10 +401,14 @@ mod tests {
         assert_eq!(cfg.auth.users.len(), 1);
         assert_eq!(cfg.auth.users[0].name, "op");
 
-        let wrong: Config =
-            toml::from_str("[auth]\n[[users]]\nname = \"op\"\nrole = \"operator\"\npassword_hash = \"x\"\n")
-                .unwrap();
-        assert!(wrong.auth.users.is_empty(), "bare [[users]] must not populate auth.users");
+        let wrong: Config = toml::from_str(
+            "[auth]\n[[users]]\nname = \"op\"\nrole = \"operator\"\npassword_hash = \"x\"\n",
+        )
+        .unwrap();
+        assert!(
+            wrong.auth.users.is_empty(),
+            "bare [[users]] must not populate auth.users"
+        );
     }
 
     #[test]

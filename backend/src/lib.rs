@@ -143,25 +143,35 @@ pub fn app(config: &Config) -> Router {
 /// `audio-device` feature these come from the rig's USB codec (two capture taps
 /// plus a playback sink); otherwise (or on any device-open failure) they fall
 /// back to a synthetic tone source and a no-op sink so the server still starts.
-type AudioIo = (Arc<dyn SampleSource>, Arc<dyn SampleSource>, Arc<dyn AudioSink>);
+type AudioIo = (
+    Arc<dyn SampleSource>,
+    Arc<dyn SampleSource>,
+    Arc<dyn AudioSink>,
+);
 
 fn audio_io(config: &Config, tone_hz: f32) -> AudioIo {
-    let synth_spectrum =
-        || -> Arc<dyn SampleSource> { Arc::new(SyntheticSource::new(config.spectrum.sample_rate_hz, tone_hz)) };
-    let synth_audio =
-        || -> Arc<dyn SampleSource> { Arc::new(SyntheticSource::new(config.audio.sample_rate_hz, tone_hz)) };
+    let synth_spectrum = || -> Arc<dyn SampleSource> {
+        Arc::new(SyntheticSource::new(
+            config.spectrum.sample_rate_hz,
+            tone_hz,
+        ))
+    };
+    let synth_audio = || -> Arc<dyn SampleSource> {
+        Arc::new(SyntheticSource::new(config.audio.sample_rate_hz, tone_hz))
+    };
 
     #[cfg(feature = "audio-device")]
     match crate::audio_device::CpalCapture::new(config.audio.capture_device.clone(), 2) {
         Ok(capture) => {
-            let sink: Arc<dyn AudioSink> =
-                match crate::audio_device::CpalSink::new(config.audio.playback_device.clone()) {
-                    Ok(sink) => Arc::new(sink),
-                    Err(err) => {
-                        tracing::warn!(error = %err, "audio playback init failed; using no-op sink");
-                        Arc::new(NoopSink)
-                    }
-                };
+            let sink: Arc<dyn AudioSink> = match crate::audio_device::CpalSink::new(
+                config.audio.playback_device.clone(),
+            ) {
+                Ok(sink) => Arc::new(sink),
+                Err(err) => {
+                    tracing::warn!(error = %err, "audio playback init failed; using no-op sink");
+                    Arc::new(NoopSink)
+                }
+            };
             tracing::info!("audio-device capture active (spectrum + audio from rig)");
             (Arc::new(capture.tap(0)), Arc::new(capture.tap(1)), sink)
         }

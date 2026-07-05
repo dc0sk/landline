@@ -31,12 +31,17 @@ const MAX_BUFFERED: usize = 48_000;
 type Ring = Arc<Mutex<VecDeque<f32>>>;
 
 fn lock(ring: &Ring) -> std::sync::MutexGuard<'_, VecDeque<f32>> {
-    ring.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+    ring.lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
 /// Pick an input/output device whose name contains `want` (case-insensitive), or
 /// the host default when `want` is `None`/unmatched.
-fn select_device(devices: impl Iterator<Item = Device>, want: Option<&str>, default: Option<Device>) -> Option<Device> {
+fn select_device(
+    devices: impl Iterator<Item = Device>,
+    want: Option<&str>,
+    default: Option<Device>,
+) -> Option<Device> {
     if let Some(needle) = want.map(str::to_ascii_lowercase) {
         for device in devices {
             if let Ok(name) = device.name() {
@@ -152,7 +157,10 @@ impl CpalCapture {
         });
 
         rx.recv().map_err(|_| "capture thread died".to_string())??;
-        Ok(Self { taps, _thread: handle })
+        Ok(Self {
+            taps,
+            _thread: handle,
+        })
     }
 
     /// A `SampleSource` view over tap `index` (clamped to the available taps).
@@ -244,8 +252,12 @@ impl CpalSink {
             }
         });
 
-        rx.recv().map_err(|_| "playback thread died".to_string())??;
-        Ok(Self { ring, _thread: handle })
+        rx.recv()
+            .map_err(|_| "playback thread died".to_string())??;
+        Ok(Self {
+            ring,
+            _thread: handle,
+        })
     }
 }
 

@@ -1,7 +1,7 @@
 ---
 title: Product Backlog
 status: Draft
-version: 0.5.25
+version: 0.5.26
 updated: 2026-07-05
 authors:
   - Simon Keimer (DC0SK)
@@ -174,11 +174,11 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 
 | ID | Title | Priority | Phase | Est. | Deps | Req IDs | Test IDs | Status |
 |---|---|---|---|---|---|---|---|---|
-| BL-070 | Implement Pi-side audio capture (CPAL) → Opus encode | Must | 3 | L | BL-025 | FR-AUD-01, FR-AUD-05 | TC-AUD-01 | Proposed |
+| BL-070 | Implement Pi-side audio capture (CPAL) → Opus encode | Must | 3 | L | BL-025 | FR-AUD-01, FR-AUD-05 | TC-AUD-01 | Done |
 | BL-071 | Stream encoded audio to browser client over WSS | Must | 3 | M | BL-070, BL-021 | FR-AUD-01 | TC-AUD-01 | In Progress |
 | BL-072 | Browser-side Opus decode and audio playback | Must | 3 | M | BL-040 | FR-AUD-01 | TC-AUD-01 | In Progress |
 | BL-073 | Browser-side mic capture and Opus encode | Must | 3 | M | BL-062 | FR-AUD-02 | TC-AUD-02 | In Progress |
-| BL-074 | Pi-side Opus decode and audio playback (CPAL) | Must | 3 | M | BL-073 | FR-AUD-02 | TC-AUD-02 | Proposed |
+| BL-074 | Pi-side Opus decode and audio playback (CPAL) | Must | 3 | M | BL-073 | FR-AUD-02 | TC-AUD-02 | Done |
 | BL-075 | Per-session auth check on audio WebSocket channel | Must | 3 | S | BL-021, BL-071 | FR-AUTH-01, NFR-SEC-01 | TC-AUTH-01, TC-SEC-01 | Done |
 | BL-076 | Bitrate/sample-rate profile for constrained mobile clients | Should | 3 | S | BL-071 | FR-AUD-05 | TC-AUD-05 | Done |
 | BL-077 | Audio drop/retry and watchdog | Should | 3 | M | BL-071 | FR-AUD-06 | TC-AUD-06 | In Progress |
@@ -262,6 +262,7 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.5.26 | 2026-07-05 | DC0SK | CPAL audio-device adapter (BL-070/074 Done): rig USB-codec capture/playback validated on the FT-991A; live spectrum from real RF; optional static frontend serving. |
 | 0.5.25 | 2026-07-05 | DC0SK | BL-055 (waterfall palette selection, FR-SPEC-04) → Done: hot/grayscale/ice palettes + UI selector; unit-tested. 38 frontend tests. |
 | 0.5.24 | 2026-07-05 | DC0SK | Opus codec (BL-076 Done): feature-gated libopus OpusCodec (configurable bitrate, FR-AUD-05); default build stays C-free, CI tests --features opus. |
 | 0.5.23 | 2026-07-05 | DC0SK | Mic TX path (BL-073 In Progress): backend Operator-gated TX receive → AudioSink seam; frontend MicCapture + encode + PTT-gated send. 74 Rust + 37 frontend tests. |

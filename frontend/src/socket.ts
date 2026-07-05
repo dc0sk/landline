@@ -16,7 +16,7 @@ export interface WebSocketLike {
   send(data: string): void;
   onopen: (() => void) | null;
   onclose: (() => void) | null;
-  onmessage: ((event: { data: string }) => void) | null;
+  onmessage: ((event: { data: string | ArrayBuffer }) => void) | null;
 }
 
 export type SocketState = "connecting" | "open" | "closed";
@@ -32,7 +32,7 @@ export interface Scheduler {
 export interface ReconnectingSocketOptions {
   readonly url: string;
   readonly connect: (url: string) => WebSocketLike;
-  readonly onMessage?: (data: string) => void;
+  readonly onMessage?: (data: string | ArrayBuffer) => void;
   readonly onStateChange?: (state: SocketState) => void;
   readonly backoff?: BackoffOptions;
   readonly scheduler?: Scheduler;
@@ -48,7 +48,7 @@ const BROWSER_SCHEDULER: Scheduler = {
 export class ReconnectingSocket {
   private readonly url: string;
   private readonly connect: (url: string) => WebSocketLike;
-  private readonly onMessage: ((data: string) => void) | undefined;
+  private readonly onMessage: ((data: string | ArrayBuffer) => void) | undefined;
   private readonly onStateChange: ((state: SocketState) => void) | undefined;
   private readonly backoff: BackoffOptions;
   private readonly scheduler: Scheduler;
@@ -141,6 +141,7 @@ export class ReconnectingSocket {
 /** Adapt a real browser `WebSocket` to [`WebSocketLike`]. */
 export function browserSocket(url: string): WebSocketLike {
   const ws = new WebSocket(url);
+  ws.binaryType = "arraybuffer"; // deliver audio frames as ArrayBuffer, not Blob
   const like: WebSocketLike = {
     close: () => ws.close(),
     send: (data) => ws.send(data),
@@ -150,6 +151,11 @@ export function browserSocket(url: string): WebSocketLike {
   };
   ws.onopen = () => like.onopen?.();
   ws.onclose = () => like.onclose?.();
-  ws.onmessage = (event) => like.onmessage?.({ data: String(event.data) });
+  ws.onmessage = (event) => {
+    const data: unknown = event.data;
+    if (typeof data === "string" || data instanceof ArrayBuffer) {
+      like.onmessage?.({ data });
+    }
+  };
   return like;
 }

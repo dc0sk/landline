@@ -1,8 +1,9 @@
-// Spectrum WebSocket client (ARC-10 → ARC-01/06, A29). Wraps the reconnecting
-// socket with the telemetry handshake: on connect, send the JWT `auth` frame
-// (FR-AUTH-01 — token in the body, never the URL); on `ready`, subscribe to the
-// spectrum stream; deliver each `spectrum` frame to the caller.
+// Telemetry WebSocket client (ARC-10 → ARC-01, A28/A31). One authenticated,
+// reconnecting socket multiplexing spectrum (JSON text frames) and audio (binary
+// frames) per ADR-02. Handshake: send the JWT `auth` frame on open, subscribe to
+// the streams the caller wants, and dispatch each frame to its callback.
 
+import { parseAudioFrame, type AudioFrame } from "./audio-player.ts";
 import { ReconnectingSocket, type Scheduler, type WebSocketLike } from "./socket.ts";
 
 export interface SpectrumFrame {
@@ -12,24 +13,27 @@ export interface SpectrumFrame {
   readonly bins: number[];
 }
 
-export interface SpectrumClientOptions {
+export interface TelemetryClientOptions {
   readonly url: string;
   readonly token: string;
   readonly connect: (url: string) => WebSocketLike;
-  readonly onFrame: (frame: SpectrumFrame) => void;
+  readonly onFrame?: (frame: SpectrumFrame) => void;
+  readonly onAudio?: (frame: AudioFrame) => void;
   readonly onError?: (message: string) => void;
   readonly scheduler?: Scheduler;
 }
 
-export class SpectrumClient {
+export class TelemetryClient {
   private readonly socket: ReconnectingSocket;
   private readonly token: string;
-  private readonly onFrame: (frame: SpectrumFrame) => void;
+  private readonly onFrame: ((frame: SpectrumFrame) => void) | undefined;
+  private readonly onAudio: ((frame: AudioFrame) => void) | undefined;
   private readonly onError: ((message: string) => void) | undefined;
 
-  constructor(options: SpectrumClientOptions) {
+  constructor(options: TelemetryClientOptions) {
     this.token = options.token;
     this.onFrame = options.onFrame;
+    this.onAudio = options.onAudio;
     this.onError = options.onError;
     this.socket = new ReconnectingSocket({
       url: options.url,
@@ -52,7 +56,11 @@ export class SpectrumClient {
     this.socket.stop();
   }
 
-  private handle(data: string): void {
+  private handle(data: string | ArrayBuffer): void {
+    if (data instanceof ArrayBuffer) {
+      this.onAudio?.(parseAudioFrame(data));
+      return;
+    }
     let message: Record<string, unknown>;
     try {
       message = JSON.parse(data) as Record<string, unknown>;
@@ -61,10 +69,16 @@ export class SpectrumClient {
     }
     switch (message["type"]) {
       case "ready":
-        this.socket.send(JSON.stringify({ type: "subscribe", stream: "spectrum" }));
+        // Subscribe to exactly the streams the caller asked for.
+        if (this.onFrame) {
+          this.socket.send(JSON.stringify({ type: "subscribe", stream: "spectrum" }));
+        }
+        if (this.onAudio) {
+          this.socket.send(JSON.stringify({ type: "subscribe", stream: "audio" }));
+        }
         break;
       case "spectrum":
-        this.onFrame({
+        this.onFrame?.({
           seq: Number(message["seq"]),
           sampleRate: Number(message["sample_rate"]),
           centerHz: Number(message["center_hz"]),

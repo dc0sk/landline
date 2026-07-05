@@ -72,6 +72,11 @@ jobs:
         run: cargo clippy --all-targets -- -D warnings
       - name: test
         run: cargo test --workspace
+      # Verify the opt-in libopus codec (native/C) builds and round-trips.
+      - name: Install libopus
+        run: sudo apt-get update && sudo apt-get install -y libopus-dev pkg-config
+      - name: Test opus feature
+        run: cargo test -p landline-backend --features opus
       - name: cargo audit
         run: |
           cargo install cargo-audit --locked

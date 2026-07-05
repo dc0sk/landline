@@ -38,3 +38,6 @@ sha2 = "0.10"
 base64 = "0.22"
 getrandom = "0.2"
 argon2 = "0.5"
+# Opus codec — OPTIONAL, behind the backend `opus` feature. Links system
+# libopus (C), so it is off by default to keep the aarch64 cross-build C-free.
+opus = "0.3"

@@ -1,7 +1,7 @@
 ---
 title: Product Backlog
 status: Draft
-version: 0.5.23
+version: 0.5.24
 updated: 2026-07-05
 authors:
   - Simon Keimer (DC0SK)
@@ -112,7 +112,7 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 
 **Note — split-host (A34):** BL-110–114 Done as documentation/config artifacts in `deploy/split-host/` (topology, WireGuard templates, Tailscale ACL, SSH fallback, tunnel-interface bind). On-network verification (TC-HOST-01/02/03, TC-SEC-12/13/14, TC-DEPLOY-07) is hardware-in-the-loop. BL-113 (FR-HOST-04) is fully done in code (`LANDLINE_API_BASE`).
 
-**Note — audio (A31):** The ARC-05 `audio` module and the WS audio transport are done in software: a reordering `JitterBuffer` with graceful loss concealment (FR-AUD-06, BL-077 In Progress), a `Codec` seam + `PcmCodec` with `[audio]` bitrate config (FR-AUD-05, BL-076 In Progress), and the **authenticated WS binary audio RX stream** (BL-071 In Progress — transport + per-session auth BL-075 Done; streams synthetic-source PCM frames, tested in `backend/tests/ws.rs`). The device ends and codec remain hardware-in-the-loop: libopus `OpusCodec` (feature-gated native adapter, keeps the default aarch64 cross-build C-free), CPAL capture/playback (BL-070/074), and end-to-end latency (BL-078). **Frontend RX audio client (BL-072 In Progress):** the `TelemetryClient` now multiplexes spectrum (text) and audio (binary) on one authenticated socket (ADR-02); `audio-player.ts` parses binary frames, reorders them through a TS `JitterBuffer` (loss concealment), and plays PCM via Web Audio. Parse + jitter logic unit-tested. **Mic TX (BL-073 In Progress):** the backend accepts binary TX frames from Operators only (per-message-type ACL, FR-AUD-02), decodes via the codec, and hands PCM to an `AudioSink` seam (`NoopSink` until the Pi rig-TX adapter); the frontend `MicCapture` grabs mic PCM (PTT-gated), encodes frames (`encodeAudioFrame`), and sends them over the socket. `split_frame`, `encodeAudioFrame`, `floatToPcm16` unit-tested. Browser Opus encode/decode + on-device mic + Pi rig-side playback (BL-074) remain HIL.
+**Note — audio (A31):** The ARC-05 `audio` module and the WS audio transport are done in software: a reordering `JitterBuffer` with graceful loss concealment (FR-AUD-06, BL-077 In Progress), a `Codec` seam + `PcmCodec` with `[audio]` bitrate config (FR-AUD-05, BL-076 In Progress), and the **authenticated WS binary audio RX stream** (BL-071 In Progress — transport + per-session auth BL-075 Done; streams synthetic-source PCM frames, tested in `backend/tests/ws.rs`). The device ends and codec remain hardware-in-the-loop: libopus `OpusCodec` (feature-gated native adapter, keeps the default aarch64 cross-build C-free), CPAL capture/playback (BL-070/074), and end-to-end latency (BL-078). **Frontend RX audio client (BL-072 In Progress):** the `TelemetryClient` now multiplexes spectrum (text) and audio (binary) on one authenticated socket (ADR-02); `audio-player.ts` parses binary frames, reorders them through a TS `JitterBuffer` (loss concealment), and plays PCM via Web Audio. Parse + jitter logic unit-tested. **Mic TX (BL-073 In Progress):** the backend accepts binary TX frames from Operators only (per-message-type ACL, FR-AUD-02), decodes via the codec, and hands PCM to an `AudioSink` seam (`NoopSink` until the Pi rig-TX adapter); the frontend `MicCapture` grabs mic PCM (PTT-gated), encodes frames (`encodeAudioFrame`), and sends them over the socket. `split_frame`, `encodeAudioFrame`, `floatToPcm16` unit-tested. Browser Opus encode/decode + on-device mic + Pi rig-side playback (BL-074) remain HIL. **Opus codec (BL-076 Done):** a `libopus`-backed `OpusCodec` (mono, VoIP, configurable bitrate — FR-AUD-05) sits behind the backend `opus` Cargo feature so it and its C dependency are absent from the default aarch64 cross-build; enabled on the Pi with `--features opus`. Round-trip-tested (a 960-sample frame), and CI builds/tests the feature. The default build uses `PcmCodec`.
 
 **Note — BL-060:** In Progress. The software targets are met — responsive layout, Canvas 2D waterfall (no WebGL), and MediaDevices-based device selection all implemented and unit-tested. Executing the full browser matrix (TC-COMPAT-01–07, TC-AUD-03/04 on Firefox/Chromium/Edge desktop + iOS Safari + Chrome Android) needs real devices and is the manual/HIL remainder.
 
@@ -180,7 +180,7 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 | BL-073 | Browser-side mic capture and Opus encode | Must | 3 | M | BL-062 | FR-AUD-02 | TC-AUD-02 | In Progress |
 | BL-074 | Pi-side Opus decode and audio playback (CPAL) | Must | 3 | M | BL-073 | FR-AUD-02 | TC-AUD-02 | Proposed |
 | BL-075 | Per-session auth check on audio WebSocket channel | Must | 3 | S | BL-021, BL-071 | FR-AUTH-01, NFR-SEC-01 | TC-AUTH-01, TC-SEC-01 | Done |
-| BL-076 | Bitrate/sample-rate profile for constrained mobile clients | Should | 3 | S | BL-071 | FR-AUD-05 | TC-AUD-05 | In Progress |
+| BL-076 | Bitrate/sample-rate profile for constrained mobile clients | Should | 3 | S | BL-071 | FR-AUD-05 | TC-AUD-05 | Done |
 | BL-077 | Audio drop/retry and watchdog | Should | 3 | M | BL-071 | FR-AUD-06 | TC-AUD-06 | In Progress |
 | BL-078 | Measure and document end-to-end audio latency on Pi 4 | Must | 3 | S | BL-074 | NFR-PERF-02 | TC-PERF-02 | Proposed |
 
@@ -262,6 +262,7 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.5.24 | 2026-07-05 | DC0SK | Opus codec (BL-076 Done): feature-gated libopus OpusCodec (configurable bitrate, FR-AUD-05); default build stays C-free, CI tests --features opus. |
 | 0.5.23 | 2026-07-05 | DC0SK | Mic TX path (BL-073 In Progress): backend Operator-gated TX receive → AudioSink seam; frontend MicCapture + encode + PTT-gated send. 74 Rust + 37 frontend tests. |
 | 0.5.22 | 2026-07-05 | DC0SK | Frontend RX audio client (BL-072 In Progress): TelemetryClient multiplexes spectrum+audio; audio-player parses binary frames + jitter buffer + Web Audio. 35 frontend tests. |
 | 0.5.21 | 2026-07-05 | DC0SK | WS audio RX transport: BL-075 (per-session audio auth) → Done, BL-071 (stream audio over WS) → In Progress (authenticated binary audio frames from a synthetic source; codec/capture ends are HIL). |

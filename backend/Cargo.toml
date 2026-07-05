@@ -37,6 +37,12 @@ base64.workspace = true
 getrandom.workspace = true
 argon2.workspace = true
 rustfft.workspace = true
+opus = { workspace = true, optional = true }
+
+# Opt-in libopus codec (native/C). Off by default so the reference aarch64
+# cross-build needs no C toolchain; enable on the Pi build with --features opus.
+[features]
+opus = ["dep:opus"]
 
 [dev-dependencies]
 tokio-tungstenite = "0.24"

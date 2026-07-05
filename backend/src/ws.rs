@@ -22,8 +22,23 @@ use axum::response::Response;
 use axum::Extension;
 use serde::{Deserialize, Serialize};
 
+use crate::audio::{f32_to_pcm16, Codec};
 use crate::auth::{Auth, Claims, Role};
 use crate::spectrum::{SampleSource, SpectrumAnalyzer};
+
+/// Shared runtime for the WS audio stream (ARC-05), built from config. Audio is
+/// delivered as binary frames (8-byte little-endian sequence header + encoded
+/// payload); the real capture source and codec plug in behind these seams.
+pub struct AudioRuntime {
+    /// Sample source (synthetic today; CPAL capture is the Phase-3 HIL adapter).
+    pub source: Arc<dyn SampleSource>,
+    /// Encoder (PCM default; libopus is the native adapter).
+    pub codec: Arc<dyn Codec>,
+    /// Samples per audio frame.
+    pub frame_samples: usize,
+    /// One frame per this period (e.g. 20 ms).
+    pub frame_period: Duration,
+}
 
 /// Shared runtime for the WS spectrum stream (ARC-06), built from config.
 pub struct SpectrumRuntime {
@@ -57,6 +72,7 @@ enum ClientMessage {
 #[serde(rename_all = "snake_case")]
 enum StreamKind {
     Spectrum,
+    Audio,
 }
 
 #[derive(Serialize)]
@@ -80,20 +96,26 @@ enum ServerMessage {
 pub async fn handler(
     ws: WebSocketUpgrade,
     Extension(auth): Extension<Arc<Auth>>,
-    Extension(runtime): Extension<Arc<SpectrumRuntime>>,
+    Extension(spectrum): Extension<Arc<SpectrumRuntime>>,
+    Extension(audio): Extension<Arc<AudioRuntime>>,
 ) -> Response {
-    let max = runtime.max_frame_bytes;
+    let max = spectrum.max_frame_bytes;
     ws.max_message_size(max)
         .max_frame_size(max)
-        .on_upgrade(move |socket| session(socket, auth, runtime))
+        .on_upgrade(move |socket| session(socket, auth, spectrum, audio))
 }
 
-async fn session(mut socket: WebSocket, auth: Arc<Auth>, runtime: Arc<SpectrumRuntime>) {
-    let Some(claims) = authenticate(&mut socket, &auth, runtime.auth_timeout).await else {
+async fn session(
+    mut socket: WebSocket,
+    auth: Arc<Auth>,
+    spectrum: Arc<SpectrumRuntime>,
+    audio: Arc<AudioRuntime>,
+) {
+    let Some(claims) = authenticate(&mut socket, &auth, spectrum.auth_timeout).await else {
         return;
     };
-    // All authenticated roles may view telemetry (STK-02); state-changing control
-    // is not exposed here (per-message-type ACL — ADR-02).
+    // All authenticated roles may view telemetry / hear RX audio (STK-01/02);
+    // state-changing control is not exposed here (per-message-type ACL — ADR-02).
     if send(&mut socket, &ServerMessage::Ready { role: claims.role })
         .await
         .is_err()
@@ -101,10 +123,13 @@ async fn session(mut socket: WebSocket, auth: Arc<Auth>, runtime: Arc<SpectrumRu
         return;
     }
 
-    let mut subscribed = false;
-    let mut seq: u64 = 0;
-    let rate = runtime.update_rate_hz.clamp(1.0, 10.0);
-    let mut ticker = tokio::time::interval(Duration::from_secs_f32(1.0 / rate));
+    let mut spectrum_on = false;
+    let mut audio_on = false;
+    let mut spectrum_seq: u64 = 0;
+    let mut audio_seq: u64 = 0;
+    let rate = spectrum.update_rate_hz.clamp(1.0, 10.0);
+    let mut spectrum_ticker = tokio::time::interval(Duration::from_secs_f32(1.0 / rate));
+    let mut audio_ticker = tokio::time::interval(audio.frame_period);
 
     loop {
         tokio::select! {
@@ -112,12 +137,14 @@ async fn session(mut socket: WebSocket, auth: Arc<Auth>, runtime: Arc<SpectrumRu
                 match incoming {
                     Some(Ok(Message::Text(text))) => {
                         match serde_json::from_str::<ClientMessage>(text.as_str()) {
-                            Ok(ClientMessage::Subscribe { stream: StreamKind::Spectrum }) => {
-                                subscribed = true;
-                            }
-                            Ok(ClientMessage::Unsubscribe { stream: StreamKind::Spectrum }) => {
-                                subscribed = false;
-                            }
+                            Ok(ClientMessage::Subscribe { stream }) => match stream {
+                                StreamKind::Spectrum => spectrum_on = true,
+                                StreamKind::Audio => audio_on = true,
+                            },
+                            Ok(ClientMessage::Unsubscribe { stream }) => match stream {
+                                StreamKind::Spectrum => spectrum_on = false,
+                                StreamKind::Audio => audio_on = false,
+                            },
                             Ok(ClientMessage::Auth { .. }) => {} // already authenticated
                             Err(_) => {
                                 let _ = send(
@@ -132,17 +159,30 @@ async fn session(mut socket: WebSocket, auth: Arc<Auth>, runtime: Arc<SpectrumRu
                     Some(Ok(_)) => {} // ignore binary/ping/pong
                 }
             }
-            _ = ticker.tick(), if subscribed => {
-                let samples = runtime.source.next_block(runtime.fft_size);
-                let bins = runtime.analyzer.analyze(&samples);
-                seq += 1;
+            _ = spectrum_ticker.tick(), if spectrum_on => {
+                let samples = spectrum.source.next_block(spectrum.fft_size);
+                let bins = spectrum.analyzer.analyze(&samples);
+                spectrum_seq += 1;
                 let frame = ServerMessage::Spectrum {
-                    seq,
-                    sample_rate: runtime.sample_rate,
-                    center_hz: runtime.center_hz,
+                    seq: spectrum_seq,
+                    sample_rate: spectrum.sample_rate,
+                    center_hz: spectrum.center_hz,
                     bins,
                 };
                 if send(&mut socket, &frame).await.is_err() {
+                    break;
+                }
+            }
+            _ = audio_ticker.tick(), if audio_on => {
+                audio_seq += 1;
+                let payload = audio.codec.encode(&f32_to_pcm16(
+                    &audio.source.next_block(audio.frame_samples),
+                ));
+                // Binary frame: 8-byte LE sequence header + encoded payload.
+                let mut frame = Vec::with_capacity(8 + payload.len());
+                frame.extend_from_slice(&audio_seq.to_le_bytes());
+                frame.extend_from_slice(&payload);
+                if socket.send(Message::Binary(frame.into())).await.is_err() {
                     break;
                 }
             }

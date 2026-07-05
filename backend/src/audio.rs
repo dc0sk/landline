@@ -14,6 +14,9 @@
 //! and the WebSocket audio transport plug in behind these seams and are
 //! validated hardware-in-the-loop.
 
+// Sample→PCM conversion casts are intentional and bounded (clamped to [-1, 1]).
+#![allow(clippy::cast_possible_truncation)]
+
 use std::collections::BTreeMap;
 
 /// A transport-level audio frame: a monotonically increasing sequence number
@@ -116,6 +119,17 @@ impl JitterBuffer {
     }
 }
 
+/// Convert normalised f32 samples (roughly `[-1, 1]`) to 16-bit PCM, clamping
+/// to avoid wrap on overflow. Bridges the shared [`crate::spectrum::SampleSource`]
+/// (f32) to the PCM codec.
+#[must_use]
+pub fn f32_to_pcm16(samples: &[f32]) -> Vec<i16> {
+    samples
+        .iter()
+        .map(|&s| (s.clamp(-1.0, 1.0) * f32::from(i16::MAX)) as i16)
+        .collect()
+}
+
 /// The audio codec seam (FR-AUD-05): encode PCM samples to a payload and back.
 pub trait Codec: Send + Sync {
     /// Encode 16-bit PCM samples to a transport payload.
@@ -209,5 +223,13 @@ mod tests {
         let codec = PcmCodec;
         let samples = [0_i16, 1, -1, 32_767, -32_768, 1234];
         assert_eq!(codec.decode(&codec.encode(&samples)), samples);
+    }
+
+    #[test]
+    fn f32_to_pcm16_scales_and_clamps() {
+        use super::f32_to_pcm16;
+        assert_eq!(f32_to_pcm16(&[0.0, 1.0, -1.0]), [0, 32_767, -32_767]);
+        // Out-of-range input is clamped, not wrapped.
+        assert_eq!(f32_to_pcm16(&[2.0, -2.0]), [32_767, -32_767]);
     }
 }

@@ -143,3 +143,27 @@ async fn authenticated_client_receives_spectrum_frames() {
     assert_eq!(frame["bins"].as_array().unwrap().len(), 128); // fft_size 256 / 2
     assert!(frame["seq"].as_u64().unwrap() >= 1);
 }
+
+#[tokio::test]
+async fn authenticated_client_receives_audio_frames() {
+    // FR-AUD-01 (transport): after auth + subscribe audio, binary audio frames
+    // arrive — 8-byte LE sequence header + encoded payload.
+    let (addr, token) = start().await;
+    let (mut ws, _) = connect_async(format!("ws://{addr}/ws")).await.unwrap();
+
+    send_json(&mut ws, &json!({"type": "auth", "token": token})).await;
+    let ready = as_json(ws.next().await.unwrap().unwrap()).unwrap();
+    assert_eq!(ready["type"], "ready");
+
+    send_json(&mut ws, &json!({"type": "subscribe", "stream": "audio"})).await;
+
+    // The next binary message is an audio frame.
+    let payload = loop {
+        if let WsMessage::Binary(bytes) = ws.next().await.unwrap().unwrap() {
+            break bytes;
+        }
+    };
+    assert!(payload.len() > 8, "frame carries a header + payload");
+    let seq = u64::from_le_bytes(payload[0..8].try_into().unwrap());
+    assert!(seq >= 1);
+}

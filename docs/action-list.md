@@ -1,7 +1,7 @@
 ---
 title: Action List
 status: Draft
-version: "0.21"
+version: "0.22"
 updated: 2026-07-05
 authors:
   - Simon Keimer (DC0SK)
@@ -65,10 +65,11 @@ License notice: This project is licensed under AGPL-3.0-only. See the top-level 
   software-buildable work:** the ops docs (A38: rollback, runbook, release checklist) and the
   secrets-rotation policy (A35 / BL-012); everything else (audio pipeline, soak/load, browser
   matrix) is hardware-in-the-loop.
-- **All software-buildable work is now complete.** A35 (secrets rotation, security.md §8.2) and
-  A38 (ops runbook + release checklist) are done, closing the last Phase-0 remainder (BL-012).
-  What remains is exclusively **hardware-in-the-loop / browser-matrix**: the audio pipeline
-  device ends + latency (A31 remainder, A32), soak/load (A37), container passthrough/decision
+- **All software-buildable work is complete**, including the **authenticated WS audio RX
+  transport** (BL-075 Done, BL-071 In Progress — binary audio frames from the shared sample
+  source, per-session auth, tested). What remains is exclusively **hardware-in-the-loop /
+  browser-matrix**: the audio device ends (CPAL capture/playback, libopus, browser Web Audio,
+  mic TX) + latency (A31 remainder, A32), soak/load (A37), container passthrough/decision
   (A33 remainder), and the browser/Pi test execution that fills the final trace records (BL-104).
 - Open Phase 0 remainder: secrets *rotation* policy (BL-012) is deferred to before production
   release — tracked below under Phase 4 preparation.
@@ -121,7 +122,7 @@ Frontend bootstrap can start in parallel once the auth contract (A6) is stable.
 
 ## 5. Milestone: Phase 3 — audio, container evaluation, split-host
 
-- [ ] A31. Bidirectional Opus audio pipeline over WSS with per-session auth — BL-070–BL-077 · FR-AUD-01–FR-AUD-06, NFR-SEC-01 · TC-AUD-01–TC-AUD-06 — *in progress — software core done: ARC-05 `audio` module — `JitterBuffer` (reorder + graceful loss concealment, FR-AUD-06) + `Codec` seam with `PcmCodec` (FR-AUD-05) + `[audio]` config. 5 unit tests; aarch64 cross-build stays C-free. Remaining (native/HIL): libopus `OpusCodec` (feature-gated), CPAL capture/playback on the Pi, the WS binary audio transport + per-session auth, and browser Web Audio playback/mic — all validated hardware-in-the-loop*
+- [ ] A31. Bidirectional Opus audio pipeline over WSS with per-session auth — BL-070–BL-077 · FR-AUD-01–FR-AUD-06, NFR-SEC-01 · TC-AUD-01–TC-AUD-06 — *in progress — software done: ARC-05 `audio` module (`JitterBuffer` reorder + loss concealment FR-AUD-06; `Codec` seam + `PcmCodec` + `f32_to_pcm16`, FR-AUD-05) **and the authenticated WS binary audio RX transport** (subscribe `audio` → seq'd binary frames from the shared sample source, per-session auth BL-075; tested in `backend/tests/ws.rs`). 8 tests; aarch64 cross-build stays C-free. Remaining is native/HIL: libopus `OpusCodec` (feature-gated), CPAL capture/playback on the Pi (BL-070/074), browser Web Audio playback + mic TX (BL-072/073), and end-to-end latency (BL-078/A32)*
 - [ ] A32. Measure/document end-to-end audio latency on Pi 4 — BL-078 · NFR-PERF-02 · TC-PERF-02
 - [ ] A33. Container evaluation (Dockerfile, compose, device passthrough, latency benchmark, decision record) — BL-090–BL-095 · NFR-DEPLOY-03, NFR-SEC-10 · TC-DEPLOY-04–TC-DEPLOY-05 — *in progress — artifacts done: hardened `deploy/container/Dockerfile` (multi-stage, non-root, ca-certs) + `compose.yml` (read-only rootfs, cap_drop ALL, no-new-privileges, private-tunnel publish — NFR-SEC-10) + decision-record skeleton; hadolint CI job. Device-passthrough eval, latency benchmark, and accept/defer decision (BL-092/093/094) are Pi HIL*
 - [x] A34. Split-host topology + WireGuard/Tailscale profiles, SSH fallback docs, frontend runtime endpoint config — BL-110–BL-114 · FR-HOST-01–FR-HOST-04, NFR-SEC-13–NFR-SEC-15 · TC-HOST-01–TC-HOST-03, TC-SEC-12–TC-SEC-14 — *done: `deploy/split-host/` — topology + tunnel-interface bind (NFR-SEC-13), WireGuard primary + config templates, Tailscale alternative, SSH fallback-only (NFR-SEC-15), verification checklist. Frontend runtime endpoint config (FR-HOST-04, BL-113) already shipped via `LANDLINE_API_BASE`. On-network verification (TC-HOST/TC-SEC-12–14) is HIL*
@@ -150,6 +151,7 @@ updated). In addition:
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.22 | 2026-07-05 | DC0SK | WS audio RX transport: authenticated binary audio frames over the shared WS (BL-075 Done, BL-071 In Progress). 73 Rust tests. Audio device ends remain HIL. |
 | 0.21 | 2026-07-05 | DC0SK | Ops/release docs (A35, A38): secrets rotation policy, ops runbook + rollback, release checklist + license gate. Closes BL-012. All software-buildable work complete; only HIL/browser remains. |
 | 0.20 | 2026-07-05 | DC0SK | Closed security remainders + TLS: A36 (nginx TLS/WSS), 0600 config check, panic sanitisation. Retires the NFR-SEC-01/TC-SEC-01 deferral; BL-021 Done. 71 Rust tests. |
 | 0.19 | 2026-07-05 | DC0SK | A34 (split-host: WireGuard/Tailscale/SSH profiles + tunnel-bind) done; A33 (container Dockerfile/compose + decision skeleton + hadolint CI) artifacts done. Remaining Phase-3 audio + container eval are Pi HIL. |

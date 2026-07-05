@@ -36,6 +36,7 @@ use axum::{middleware, Extension, Router};
 use tower_http::limit::RequestBodyLimitLayer;
 use tower_http::trace::TraceLayer;
 
+use crate::audio::PcmCodec;
 use crate::audit::AuditLog;
 use crate::auth::Auth;
 use crate::config::Config;
@@ -43,7 +44,7 @@ use crate::gpio::GpioController;
 use crate::rig::{PttGuard, RigAdapter};
 use crate::security::RateLimiter;
 use crate::spectrum::{SampleSource, SpectrumAnalyzer, SyntheticSource};
-use crate::ws::SpectrumRuntime;
+use crate::ws::{AudioRuntime, SpectrumRuntime};
 
 /// Build the top-level Axum application (ARC-01).
 ///
@@ -80,6 +81,16 @@ pub fn app(config: &Config) -> Router {
         max_frame_bytes: config.security.max_body_bytes,
         auth_timeout: Duration::from_secs(5),
     });
+    let audio_source: Arc<dyn SampleSource> =
+        Arc::new(SyntheticSource::new(config.audio.sample_rate_hz, tone_hz));
+    let frame_samples =
+        (config.audio.sample_rate_hz as usize * config.audio.frame_ms as usize) / 1000;
+    let audio_runtime = Arc::new(AudioRuntime {
+        source: audio_source,
+        codec: Arc::new(PcmCodec),
+        frame_samples: frame_samples.max(1),
+        frame_period: Duration::from_millis(u64::from(config.audio.frame_ms.max(1))),
+    });
     let limiter = Arc::new(RateLimiter::new(config.security.rate_limit_per_sec));
 
     // Rate limiting guards the auth + protected API surface (not liveness).
@@ -101,6 +112,7 @@ pub fn app(config: &Config) -> Router {
         .layer(Extension(ptt))
         .layer(Extension(gpio))
         .layer(Extension(spectrum))
+        .layer(Extension(audio_runtime))
         .layer(security::cors_layer(&config.security.allowed_origins))
         .layer(RequestBodyLimitLayer::new(config.security.max_body_bytes))
         .layer(TraceLayer::new_for_http())

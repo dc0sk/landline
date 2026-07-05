@@ -1,7 +1,7 @@
 ---
 title: Action List
 status: Draft
-version: "0.25"
+version: "0.26"
 updated: 2026-07-05
 authors:
   - Simon Keimer (DC0SK)
@@ -151,6 +151,7 @@ updated). In addition:
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.26 | 2026-07-05 | DC0SK | Could-feature: waterfall palette selection (BL-055, FR-SPEC-04) — hot/grayscale/ice + selector, tested. |
 | 0.25 | 2026-07-05 | DC0SK | Opus codec (BL-076 Done): feature-gated libopus OpusCodec (FR-AUD-05); default C-free, CI tests --features opus. 75 Rust tests with feature. |
 | 0.24 | 2026-07-05 | DC0SK | Mic TX path: backend Operator-gated TX receive (AudioSink seam); frontend MicCapture + encode + PTT-gated send. Software audio path (RX+TX transport) complete. |
 | 0.23 | 2026-07-05 | DC0SK | Frontend RX audio client: TelemetryClient multiplexes spectrum+audio (ADR-02); binary-frame parse + jitter buffer + Web Audio. 35 frontend tests. |

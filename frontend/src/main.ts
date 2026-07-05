@@ -189,8 +189,10 @@ async function handleModeChange(): Promise<void> {
   }
   showRigError("");
   const mode = byId<HTMLSelectElement>("mode-select").value as RigMode;
+  // Passband tuning / filter width where the rig supports it (FR-RIG-07); 0 = rig default.
+  const passband = Number.parseInt(byId<HTMLInputElement>("passband-input").value, 10);
   try {
-    await setMode(api, tokens.accessToken, mode);
+    await setMode(api, tokens.accessToken, mode, Number.isFinite(passband) ? passband : 0);
   } catch {
     showRigError("Could not set mode.");
   }
@@ -319,6 +321,9 @@ function main(): void {
     modeSelect.append(option);
   }
   modeSelect.addEventListener("change", () => {
+    void handleModeChange();
+  });
+  byId<HTMLInputElement>("passband-input").addEventListener("change", () => {
     void handleModeChange();
   });
   byId<HTMLButtonElement>("ptt-button").addEventListener("click", () => {

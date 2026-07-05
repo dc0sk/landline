@@ -1,0 +1,15 @@
+# WireGuard config for the BACKEND host (Raspberry Pi) — /etc/wireguard/wg0.conf
+# Fill in the private key (this host) and the peer's public key (frontend host).
+# The backend binds landline to Address below (NFR-SEC-13), never 0.0.0.0.
+
+[Interface]
+Address = 10.10.0.1/24
+ListenPort = 51820
+PrivateKey = <backend-host-private-key>
+
+[Peer]
+# The frontend host.
+PublicKey = <frontend-host-public-key>
+AllowedIPs = 10.10.0.2/32
+# PersistentKeepalive helps if the frontend host is behind NAT.
+PersistentKeepalive = 25

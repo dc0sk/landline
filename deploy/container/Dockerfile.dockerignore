@@ -1,0 +1,9 @@
+/target
+**/node_modules
+**/dist
+.git
+.github
+docs
+frontend
+deploy/split-host
+*.md

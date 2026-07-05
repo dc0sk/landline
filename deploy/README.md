@@ -1,8 +1,16 @@
 # Deployment
 
 Native **systemd** service is the reference deployment for the landline backend
-(ADR-06, NFR-DEPLOY-02). A container profile is evaluated in Phase 3 (ADR-06,
-BL-090–095), and production TLS / reverse proxy is Phase 4 (BL-100–101).
+(ADR-06, NFR-DEPLOY-02). A **container profile** is evaluated in
+[`container/`](container/) (ADR-06, NFR-DEPLOY-03), a **split-host profile** is in
+[`split-host/`](split-host/) (ADR-05, NFR-DEPLOY-07/08), and production TLS /
+reverse proxy is Phase 4 (BL-100–101).
+
+| Profile | Where | Status |
+|---|---|---|
+| Native (systemd) — reference | [`systemd/landline.service`](systemd/landline.service) | supported |
+| Container (evaluated) | [`container/`](container/) | evaluated; supported pending Pi HIL |
+| Split-host (WireGuard/Tailscale) | [`split-host/`](split-host/) | documented profile |
 
 ## Native (systemd)
 

@@ -19,8 +19,10 @@ refresh_ttl_secs = 86400  # 24 hours
 # User accounts. `password_hash` is an argon2 PHC string — never a plaintext
 # password (NFR-SEC-12). Generate one with:
 #   cargo run -p landline-backend --bin landline-hash -- <password>
-# Roles: admin | operator | observer.
-# [[users]]
+# Roles: admin | operator | observer. NOTE the table path is `[[auth.users]]`
+# (users live under [auth]); a bare `[[users]]` is a *different*, top-level
+# array and will not be read.
+# [[auth.users]]
 # name = "operator"
 # role = "operator"
 # password_hash = "$argon2id$v=19$m=19456,t=2,p=1$c29tZXNhbHQ$<hash>"

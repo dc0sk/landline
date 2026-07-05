@@ -49,10 +49,22 @@
             /></label>
             <button type="submit">Set</button>
           </form>
+
+          <div>
+            <label>Mode <select id="mode-select"></select></label>
+          </div>
+
+          <div>
+            <button id="ptt-button" type="button" aria-pressed="false">PTT (transmit)</button>
+          </div>
+
+          <div>
+            <span>S-meter:</span>
+            <output id="smeter-display">—</output>
+          </div>
+
           <p id="rig-error" role="alert"></p>
         </section>
-
-        <p>Mode, PTT and S-meter controls arrive in actions A22–A24.</p>
       </section>
     </main>
     <script type="module" src="./dist/main.js"></script>

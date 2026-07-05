@@ -4,7 +4,16 @@
 // lives in api.ts / session.ts / backoff.ts.
 
 import { ApiClient } from "./api.ts";
-import { getFrequency, setFrequency } from "./control.ts";
+import {
+  getFrequency,
+  getMode,
+  getSmeter,
+  RIG_MODES,
+  setFrequency,
+  setMode,
+  setPtt,
+  type RigMode,
+} from "./control.ts";
 import { Session } from "./session.ts";
 
 const BASE_URL = (globalThis as { LANDLINE_API_BASE?: string }).LANDLINE_API_BASE ?? "";
@@ -15,6 +24,8 @@ const api = new ApiClient({
   now: () => Date.now(),
 });
 const session = new Session();
+
+let pttActive = false;
 
 function byId<T extends HTMLElement = HTMLElement>(id: string): T {
   const element = document.getElementById(id);
@@ -35,7 +46,10 @@ function render(): void {
   const tokens = session.current;
   if (tokens !== null) {
     byId("who").textContent = `Signed in as ${tokens.role}`;
+    setPttUi(false);
     void refreshFrequency();
+    void refreshMode();
+    void refreshSmeter();
   }
 }
 
@@ -73,6 +87,68 @@ async function handleSetFrequency(event: SubmitEvent): Promise<void> {
     await refreshFrequency();
   } catch {
     showRigError("Could not set frequency (out of range or rig unavailable).");
+  }
+}
+
+async function refreshMode(): Promise<void> {
+  const tokens = session.current;
+  if (tokens === null) {
+    return;
+  }
+  try {
+    byId<HTMLSelectElement>("mode-select").value = await getMode(api, tokens.accessToken);
+  } catch {
+    // Leave the selector as-is if the rig is unreachable.
+  }
+}
+
+async function handleModeChange(): Promise<void> {
+  const tokens = session.current;
+  if (tokens === null) {
+    return;
+  }
+  showRigError("");
+  const mode = byId<HTMLSelectElement>("mode-select").value as RigMode;
+  try {
+    await setMode(api, tokens.accessToken, mode);
+  } catch {
+    showRigError("Could not set mode.");
+  }
+}
+
+function setPttUi(active: boolean): void {
+  pttActive = active;
+  const button = byId<HTMLButtonElement>("ptt-button");
+  button.textContent = active ? "ON AIR — release" : "PTT (transmit)";
+  button.classList.toggle("transmitting", active);
+  button.setAttribute("aria-pressed", String(active));
+}
+
+async function handlePtt(): Promise<void> {
+  const tokens = session.current;
+  if (tokens === null) {
+    return;
+  }
+  showRigError("");
+  const next = !pttActive;
+  try {
+    await setPtt(api, tokens.accessToken, next);
+    setPttUi(next);
+  } catch {
+    showRigError("PTT not permitted (Operator role required) or rig unavailable.");
+  }
+}
+
+async function refreshSmeter(): Promise<void> {
+  const tokens = session.current;
+  if (tokens === null) {
+    return;
+  }
+  try {
+    const strength = await getSmeter(api, tokens.accessToken);
+    byId("smeter-display").textContent = `${strength} dB`;
+  } catch {
+    byId("smeter-display").textContent = "—";
   }
 }
 
@@ -126,9 +202,30 @@ function main(): void {
   byId<HTMLFormElement>("freq-form").addEventListener("submit", (event) => {
     void handleSetFrequency(event);
   });
+
+  const modeSelect = byId<HTMLSelectElement>("mode-select");
+  for (const mode of RIG_MODES) {
+    const option = document.createElement("option");
+    option.value = mode;
+    option.textContent = mode;
+    modeSelect.append(option);
+  }
+  modeSelect.addEventListener("change", () => {
+    void handleModeChange();
+  });
+  byId<HTMLButtonElement>("ptt-button").addEventListener("click", () => {
+    void handlePtt();
+  });
+
   window.setInterval(() => {
     void maybeRefresh();
   }, 30_000);
+  // Poll the S-meter while signed in (FR-RIG-06 point-read; streaming is Phase 2).
+  window.setInterval(() => {
+    if (session.isAuthenticated(Date.now())) {
+      void refreshSmeter();
+    }
+  }, 1_000);
   render();
 }
 

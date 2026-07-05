@@ -1,8 +1,8 @@
 ---
 title: "landline — Documentation & RE Process"
 status: Draft
-version: "0.6.1"
-updated: 2026-07-04
+version: "0.6.2"
+updated: 2026-07-05
 authors:
   - Simon Keimer (DC0SK)
 owns: []
@@ -44,6 +44,7 @@ by a build-breaking gate.
 | [roadmap.md](roadmap.md) | Release/phase plan, milestones, entry/exit gates | — |
 | [action-list.md](action-list.md) | Ordered, traceable action checklist per milestone (operational companion to backlog/roadmap) | — |
 | [deployment.md](deployment.md) | Split-host deployment profiles + decision record | — |
+| [release-checklist.md](release-checklist.md) | Go/no-go release gate (traceability, security, deployment, license) | — |
 | [documentation-review.md](documentation-review.md) | Documentation gaps and improvement backlog | — |
 
 ## 1a. Document conventions
@@ -199,5 +200,6 @@ The exhaustive per-ID table is maintained alongside the migration commit; the
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.6.2 | 2026-07-05 | DC0SK | Added release-checklist.md to the document map. |
 | 0.6.1 | 2026-07-04 | DC0SK | Fixed stale `scripts/trace-gate` references to the actual `scripts/trace-gate.py` path; added action-list.md to the document map. |
 | 0.6 | 2026-06-26 | DC0SK | Adopted area-coded ID scheme, layered RE doc tree (vision/stakeholder/system/concept/test), R1–R5 traceability gate, and frontmatter conventions. Migrated 0.x flat IDs (Appendix A). |

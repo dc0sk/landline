@@ -13,6 +13,9 @@ reverse proxy is Phase 4 (BL-100–101).
 | Split-host (WireGuard/Tailscale) | [`split-host/`](split-host/) | documented profile |
 | TLS reverse proxy (nginx) | [`nginx/`](nginx/) | production TLS/WSS (NFR-SEC-01) |
 
+**Operations:** [`RUNBOOK.md`](RUNBOOK.md) (start/stop, update, rollback, rotation,
+logs) and the release gate in [`../docs/release-checklist.md`](../docs/release-checklist.md).
+
 > **Config permissions (NFR-SEC-03):** the backend **rejects a `config.toml` that
 > is group- or world-accessible** — install it `0600`, owned by the service user.
 

@@ -15,7 +15,7 @@ import {
   setPtt,
   type RigMode,
 } from "./control.ts";
-import { AudioPlayer } from "./audio-player.ts";
+import { AudioPlayer, MicCapture } from "./audio-player.ts";
 import { Session } from "./session.ts";
 import { browserSocket } from "./socket.ts";
 import { TelemetryClient } from "./telemetry-client.ts";
@@ -33,6 +33,7 @@ const session = new Session();
 let pttActive = false;
 let telemetryClient: TelemetryClient | null = null;
 let audioPlayer: AudioPlayer | null = null;
+let micCapture: MicCapture | null = null;
 
 function wsUrl(): string {
   if (BASE_URL) {
@@ -66,6 +67,7 @@ function startTelemetry(): void {
 }
 
 function stopTelemetry(): void {
+  stopMicTx();
   telemetryClient?.stop();
   telemetryClient = null;
   audioPlayer?.stop();
@@ -210,9 +212,34 @@ async function handlePtt(): Promise<void> {
   try {
     await setPtt(api, tokens.accessToken, next);
     setPttUi(next);
+    // Mic TX is gated on PTT (FR-AUD-02): capture only while transmitting.
+    if (next) {
+      await startMicTx();
+    } else {
+      stopMicTx();
+    }
   } catch {
     showRigError("PTT not permitted (Operator role required) or rig unavailable.");
   }
+}
+
+async function startMicTx(): Promise<void> {
+  if (micCapture !== null) {
+    return;
+  }
+  const capture = new MicCapture();
+  const deviceId = byId<HTMLSelectElement>("audio-input").value || undefined;
+  try {
+    await capture.start(deviceId, (frame) => telemetryClient?.sendAudio(frame));
+    micCapture = capture;
+  } catch {
+    showRigError("Microphone unavailable for transmit.");
+  }
+}
+
+function stopMicTx(): void {
+  micCapture?.stop();
+  micCapture = null;
 }
 
 async function refreshSmeter(): Promise<void> {

@@ -18,8 +18,10 @@ class FakeSocket implements WebSocketLike {
   close(): void {
     this.closed = true;
   }
-  send(data: string): void {
-    this.sent.push(data);
+  send(data: string | ArrayBuffer): void {
+    if (typeof data === "string") {
+      this.sent.push(data);
+    }
   }
 }
 

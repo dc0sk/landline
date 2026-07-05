@@ -36,7 +36,7 @@ use axum::{middleware, Extension, Router};
 use tower_http::limit::RequestBodyLimitLayer;
 use tower_http::trace::TraceLayer;
 
-use crate::audio::PcmCodec;
+use crate::audio::{NoopSink, PcmCodec};
 use crate::audit::AuditLog;
 use crate::auth::Auth;
 use crate::config::Config;
@@ -88,6 +88,7 @@ pub fn app(config: &Config) -> Router {
     let audio_runtime = Arc::new(AudioRuntime {
         source: audio_source,
         codec: Arc::new(PcmCodec),
+        sink: Arc::new(NoopSink),
         frame_samples: frame_samples.max(1),
         frame_period: Duration::from_millis(u64::from(config.audio.frame_ms.max(1))),
     });

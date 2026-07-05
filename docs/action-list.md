@@ -1,7 +1,7 @@
 ---
 title: Action List
 status: Draft
-version: "0.10"
+version: "0.11"
 updated: 2026-07-05
 authors:
   - Simon Keimer (DC0SK)
@@ -38,9 +38,10 @@ License notice: This project is licensed under AGPL-3.0-only. See the top-level 
   the **rig control endpoints** (A11–A14) are live, and the **Phase 1 backend is complete**
   (A15 S-meter read, A16 circuit breaker, A17 GPIO). The **frontend has started** (A18–A19:
   TypeScript project + authenticated session bootstrap, verified with typecheck + 11 tests +
-  build), and A20–A21 (reconnecting WS client + frequency display/tuning UI) have landed
-  (18 frontend tests). **Next action: A22–A24** — mode selector, PTT button, and S-meter
-  display, then A25 responsive layout, A26 systemd unit, and the Phase 1 exit review (A27).
+  build), A20–A21 (WS client + frequency UI), and A22–A24 (mode selector, PTT button,
+  S-meter display) have landed (22 frontend tests). The full rig-control UI is now wired
+  over the REST API. **Next action: A25** — responsive CSS layout (desktop 3-column /
+  mobile stack), then A26 systemd unit and the Phase 1 exit review (A27).
 - Open Phase 0 remainder: secrets *rotation* policy (BL-012) is deferred to before production
   release — tracked below under Phase 4 preparation.
 
@@ -77,9 +78,9 @@ Frontend bootstrap can start in parallel once the auth contract (A6) is stable.
 - [x] A19. Implement authenticated session bootstrap (login, token storage, logout) — BL-041 · FR-AUTH-01–FR-AUTH-05 · TC-AUTH-01–TC-AUTH-05 — *done: `api.ts` (login/refresh/logout/authed GET), `session.ts` (in-memory tokens — never persisted, XSS-safe; expiry/refresh-window/role checks), `main.ts` login/logout wiring + auto-refresh; 11 unit tests. Browser E2E across the matrix (TC-COMPAT) is the A25/Phase-2 pass*
 - [x] A20. Implement WebSocket client with reconnect/backoff — BL-046 · NFR-REL-01 · TC-REL-01 — *done: `socket.ts` `ReconnectingSocket` — exponential backoff (1 s base, 30 s cap), attempt reset on open, injected transport + scheduler; 5 unit tests (TC-REL-01 logic). Activates with the Phase-2 WS telemetry channel (ADR-02); `browserSocket` adapts the real WebSocket*
 - [x] A21. Implement frequency display and tuning control — BL-042 · FR-RIG-01–FR-RIG-02, NFR-COMPAT-06 · TC-RIG-01–TC-RIG-02, TC-COMPAT-01–TC-COMPAT-02 — *done: `control.ts` getFrequency/setFrequency over the REST API + `api.post`; frequency panel in `index.html`/`main.ts` (display + set, error states); 2 unit tests. Browser-matrix E2E (TC-COMPAT) is the A25/manual pass*
-- [ ] A22. Implement mode selector — BL-043 · FR-RIG-03–FR-RIG-04 · TC-RIG-03
-- [ ] A23. Implement PTT button with visual transmit indicator — BL-044 · FR-RIG-05 · TC-RIG-04
-- [ ] A24. Implement S-meter display — BL-045 · FR-RIG-06 · TC-RIG-06
+- [x] A22. Implement mode selector — BL-043 · FR-RIG-03–FR-RIG-04 · TC-RIG-03 — *done: `control.ts` getMode/setMode + `<select>` populated from `RIG_MODES`, set-on-change, reads current mode on load*
+- [x] A23. Implement PTT button with visual transmit indicator — BL-044 · FR-RIG-05 · TC-RIG-04 — *done: `control.ts` setPtt + toggle button with `transmitting` class + `aria-pressed`; Operator-only rejection surfaced as an error*
+- [x] A24. Implement S-meter display — BL-045 · FR-RIG-06 · TC-RIG-06 — *done: `control.ts` getSmeter + `<output>` polled every 1 s while signed in (continuous streaming rides the Phase-2 WS channel)*
 - [ ] A25. Responsive CSS layout (desktop 3-column, mobile vertical stack) — BL-047 · NFR-COMPAT-03–NFR-COMPAT-06 · TC-COMPAT-04–TC-COMPAT-07
 - [ ] A26. Write systemd service unit (start/stop/restart, resource limits) — BL-080 · NFR-DEPLOY-02 · TC-DEPLOY-03
 - [ ] A27. Phase 1 exit review: run all scoped TC-RIG/TC-GPIO/TC-AUTH/TC-SEC/TC-PERF-01/TC-DEPLOY gates and tick roadmap.md §5 exit criteria — roadmap §5 · docs updated per governance change control
@@ -121,6 +122,7 @@ updated). In addition:
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.11 | 2026-07-05 | DC0SK | Marked A22–A24 done: mode selector, PTT button (transmit indicator), S-meter display. Full rig-control UI wired; 22 frontend tests. Next action A25 (responsive CSS). |
 | 0.10 | 2026-07-05 | DC0SK | Marked A20–A21 done: reconnecting WS client (backoff, NFR-REL-01) + frequency display/tuning UI over REST. 18 frontend tests. Next action A22–A24. |
 | 0.9 | 2026-07-04 | DC0SK | Marked A18–A19 done: ARC-10 TypeScript frontend project + authenticated session bootstrap (api/session/backoff + login UI), 11 unit tests, CI frontend job. Next action A20/A21. |
 | 0.8 | 2026-07-04 | DC0SK | Marked A15–A17 done: S-meter read endpoint, rig circuit breaker (NFR-REL-02), GPIO control with allowlist + safe states (ARC-08). Phase 1 backend complete; next milestone the frontend (A18+). |

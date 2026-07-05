@@ -5,8 +5,42 @@
 
 import type { ApiClient } from "./api.ts";
 
+/** The allowlisted operating modes, matching the backend rigctld tokens. */
+export type RigMode =
+  | "USB"
+  | "LSB"
+  | "CW"
+  | "CWR"
+  | "AM"
+  | "FM"
+  | "WFM"
+  | "RTTY"
+  | "PKTUSB"
+  | "PKTLSB";
+
+export const RIG_MODES: readonly RigMode[] = [
+  "USB",
+  "LSB",
+  "CW",
+  "CWR",
+  "AM",
+  "FM",
+  "WFM",
+  "RTTY",
+  "PKTUSB",
+  "PKTLSB",
+];
+
 interface FrequencyResponse {
   readonly hz: number;
+}
+
+interface ModeResponse {
+  readonly mode: RigMode;
+}
+
+interface SmeterResponse {
+  readonly strength: number;
 }
 
 /** Read the current rig frequency in Hz (FR-RIG-01). */
@@ -25,4 +59,35 @@ export async function setFrequency(
   hz: number,
 ): Promise<void> {
   await api.post("/api/rig/frequency", accessToken, { hz });
+}
+
+/** Read the current operating mode (FR-RIG-03). */
+export async function getMode(api: ApiClient, accessToken: string): Promise<RigMode> {
+  const response = await api.get<ModeResponse>("/api/rig/mode", accessToken);
+  return response.mode;
+}
+
+/** Set the operating mode, with an optional passband in Hz (FR-RIG-04). */
+export async function setMode(
+  api: ApiClient,
+  accessToken: string,
+  mode: RigMode,
+  passbandHz = 0,
+): Promise<void> {
+  await api.post("/api/rig/mode", accessToken, { mode, passband_hz: passbandHz });
+}
+
+/** Activate or deactivate PTT (FR-RIG-05). Requires the Operator role. */
+export async function setPtt(
+  api: ApiClient,
+  accessToken: string,
+  transmit: boolean,
+): Promise<void> {
+  await api.post("/api/rig/ptt", accessToken, { transmit });
+}
+
+/** Read the S-meter strength (FR-RIG-06). */
+export async function getSmeter(api: ApiClient, accessToken: string): Promise<number> {
+  const response = await api.get<SmeterResponse>("/api/rig/smeter", accessToken);
+  return response.strength;
 }

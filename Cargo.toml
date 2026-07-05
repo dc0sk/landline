@@ -41,3 +41,7 @@ argon2 = "0.5"
 # Opus codec — OPTIONAL, behind the backend `opus` feature. Links system
 # libopus (C), so it is off by default to keep the aarch64 cross-build C-free.
 opus = "0.3"
+# Audio device I/O — OPTIONAL, behind the backend `audio-device` feature. Links
+# system ALSA (C) on Linux, so it is off by default (C-free cross-build). Built
+# natively on the Pi to capture/play the rig's USB audio codec.
+cpal = "0.15"

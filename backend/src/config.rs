@@ -50,6 +50,12 @@ pub struct AudioConfig {
     pub jitter_target_frames: usize,
     /// Jitter-buffer maximum depth before a missing frame is concealed.
     pub jitter_max_frames: usize,
+    /// Capture device name substring (audio-device feature); `None` = default.
+    #[serde(default)]
+    pub capture_device: Option<String>,
+    /// Playback device name substring (audio-device feature); `None` = default.
+    #[serde(default)]
+    pub playback_device: Option<String>,
 }
 
 impl Default for AudioConfig {
@@ -60,6 +66,8 @@ impl Default for AudioConfig {
             bitrate_bps: 16_000,
             jitter_target_frames: 3,
             jitter_max_frames: 10,
+            capture_device: None,
+            playback_device: None,
         }
     }
 }

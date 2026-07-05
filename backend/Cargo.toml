@@ -38,11 +38,13 @@ getrandom.workspace = true
 argon2.workspace = true
 rustfft.workspace = true
 opus = { workspace = true, optional = true }
+cpal = { workspace = true, optional = true }
 
-# Opt-in libopus codec (native/C). Off by default so the reference aarch64
-# cross-build needs no C toolchain; enable on the Pi build with --features opus.
+# Opt-in native/C features. Off by default so the reference aarch64 cross-build
+# needs no C toolchain; enable on the Pi build (--features opus,audio-device).
 [features]
 opus = ["dep:opus"]
+audio-device = ["dep:cpal"]
 
 [dev-dependencies]
 tokio-tungstenite = "0.24"

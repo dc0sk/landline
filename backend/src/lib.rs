@@ -16,6 +16,8 @@
 //! - [`telemetry`] — ARC-01 Tracing initialisation
 
 pub mod audio;
+#[cfg(feature = "audio-device")]
+pub mod audio_device;
 pub mod audit;
 pub mod auth;
 pub mod config;
@@ -36,7 +38,7 @@ use axum::{middleware, Extension, Router};
 use tower_http::limit::RequestBodyLimitLayer;
 use tower_http::trace::TraceLayer;
 
-use crate::audio::{Codec, NoopSink, PcmCodec};
+use crate::audio::{AudioSink, Codec, NoopSink, PcmCodec};
 use crate::audit::AuditLog;
 use crate::auth::Auth;
 use crate::config::Config;
@@ -67,10 +69,43 @@ pub fn app(config: &Config) -> Router {
     // Synthetic tone at 1/8 of the sample rate (small integer → exact in f32).
     #[allow(clippy::cast_precision_loss)]
     let tone_hz = config.spectrum.sample_rate_hz as f32 / 8.0;
-    let source: Arc<dyn SampleSource> = Arc::new(SyntheticSource::new(
-        config.spectrum.sample_rate_hz,
-        tone_hz,
-    ));
+    let synth_spectrum = || -> Arc<dyn SampleSource> {
+        Arc::new(SyntheticSource::new(config.spectrum.sample_rate_hz, tone_hz))
+    };
+    let synth_audio = || -> Arc<dyn SampleSource> {
+        Arc::new(SyntheticSource::new(config.audio.sample_rate_hz, tone_hz))
+    };
+    // Real rig audio via the USB codec when built with --features audio-device;
+    // fall back to the synthetic source / no-op sink on any device-open failure.
+    #[cfg(feature = "audio-device")]
+    let (source, audio_source, audio_sink): (
+        Arc<dyn SampleSource>,
+        Arc<dyn SampleSource>,
+        Arc<dyn AudioSink>,
+    ) = match crate::audio_device::CpalCapture::new(config.audio.capture_device.clone(), 2) {
+        Ok(capture) => {
+            let sink: Arc<dyn AudioSink> =
+                match crate::audio_device::CpalSink::new(config.audio.playback_device.clone()) {
+                    Ok(sink) => Arc::new(sink),
+                    Err(err) => {
+                        tracing::warn!(error = %err, "audio playback init failed; using no-op sink");
+                        Arc::new(NoopSink)
+                    }
+                };
+            tracing::info!("audio-device capture active (spectrum + audio from rig)");
+            (Arc::new(capture.tap(0)), Arc::new(capture.tap(1)), sink)
+        }
+        Err(err) => {
+            tracing::warn!(error = %err, "audio capture init failed; using synthetic source");
+            (synth_spectrum(), synth_audio(), Arc::new(NoopSink))
+        }
+    };
+    #[cfg(not(feature = "audio-device"))]
+    let (source, audio_source, audio_sink): (
+        Arc<dyn SampleSource>,
+        Arc<dyn SampleSource>,
+        Arc<dyn AudioSink>,
+    ) = (synth_spectrum(), synth_audio(), Arc::new(NoopSink));
     let spectrum = Arc::new(SpectrumRuntime {
         analyzer: Arc::new(SpectrumAnalyzer::new(config.spectrum.fft_size)),
         source,
@@ -81,8 +116,6 @@ pub fn app(config: &Config) -> Router {
         max_frame_bytes: config.security.max_body_bytes,
         auth_timeout: Duration::from_secs(5),
     });
-    let audio_source: Arc<dyn SampleSource> =
-        Arc::new(SyntheticSource::new(config.audio.sample_rate_hz, tone_hz));
     let frame_samples =
         (config.audio.sample_rate_hz as usize * config.audio.frame_ms as usize) / 1000;
     // Opus when built with --features opus (Pi/native), PCM otherwise (default,
@@ -102,7 +135,7 @@ pub fn app(config: &Config) -> Router {
     let audio_runtime = Arc::new(AudioRuntime {
         source: audio_source,
         codec,
-        sink: Arc::new(NoopSink),
+        sink: audio_sink,
         frame_samples: frame_samples.max(1),
         frame_period: Duration::from_millis(u64::from(config.audio.frame_ms.max(1))),
     });

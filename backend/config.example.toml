@@ -10,6 +10,10 @@
 # tunnel interface (WireGuard/Tailscale), not a public 0.0.0.0 bind (NFR-SEC-13).
 bind = "127.0.0.1"
 port = 8443
+# Optional: serve a static frontend directory at `/` (single-host deployments,
+# same origin as the API — no reverse proxy needed). Split-host serves the UI
+# from a separate origin instead. Unset = API only.
+# static_dir = "/home/pi/landline/frontend"
 
 [auth]
 # Short-lived access tokens (FR-AUTH-02) plus longer-lived refresh (FR-AUTH-03).
@@ -87,3 +91,7 @@ frame_ms = 20
 bitrate_bps = 16000
 jitter_target_frames = 3
 jitter_max_frames = 10
+# Audio device selection (only with --features audio-device). Substring match on
+# the device name; unset = system default. On a Pi with a rig USB codec, e.g.:
+# capture_device = "CODEC"
+# playback_device = "CODEC"

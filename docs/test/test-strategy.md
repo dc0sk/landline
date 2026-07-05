@@ -1,7 +1,7 @@
 ---
 title: "Test Strategy & Traceability"
 status: Draft
-version: "0.9"
+version: "0.10"
 updated: 2026-07-05
 authors:
   - Simon Keimer (DC0SK)
@@ -320,13 +320,17 @@ operator's safety limit.
 | TC-SEC (input validation) | Security | **HIL — pass** | Negative frequency and a mode-injection string (`USB;rm -rf /`) both rejected with 400 before reaching rigctld. |
 | TC-AUDIT-01 | Security | **HIL — pass** | Hash-chained audit log records `auth.login`, `rig.set_freq`, `rig.set_mode` with `outcome="success"`, seq 0–4. |
 | TC-RIG (PTT) | Integration | **Deferred (safety)** | Not run — requires a dummy load; PTT/TX withheld pending operator confirmation. |
-| Spectrum / audio on real hardware | Integration | **Blocked on adapter** | The `SampleSource`/`AudioSink` CPAL adapter (rig USB-audio capture/playback) is not yet written; the pipeline currently streams a synthetic source. Needs `alsa-dev` on the Pi. |
+| TC-SPEC-01 (real RF) | Integration | **HIL — pass** | With `--features audio-device`, the `CpalCapture` adapter opens the rig's USB codec and the spectrum WS delivers **live** FFT frames — peak bin and noise floor vary frame-to-frame (real audio), unlike the fixed synthetic tone. |
+| TC-AUD (real capture) | Integration | **HIL — pass** | Binary audio WS frames stream from the same capture tap (seq-incrementing, non-empty). With `--features audio-device,opus` they are Opus-encoded; content-listening is a browser test. |
+| Static frontend serving | Integration | **HIL — pass** | `[server] static_dir` serves the UI at `/` on the API origin: `GET /`, `/styles.css`, `/dist/main.js`, `/healthz` all 200. |
 
 **Bug found & fixed:** login initially 401'd — the config example used `[[users]]` instead of
 `[[auth.users]]`, so no users loaded (fixed + regression-tested, PR #31).
 
-**Disposition:** rig-control HIL is **green**. Remaining HIL: PTT (needs dummy load), real
-spectrum/audio (needs the CPAL adapter), GPIO, and the browser matrix.
+**Disposition:** rig-control **and** real spectrum/audio-capture HIL are **green** (CpalCapture/
+CpalSink adapter validated on the FT-991A USB codec). Remaining HIL: PTT (needs dummy load),
+in-browser audio *playback* (PCM works; Opus needs browser-side decode, BL-072), GPIO, and the
+browser matrix.
 
 ---
 
@@ -334,6 +338,7 @@ spectrum/audio (needs the CPAL adapter), GPIO, and the browser matrix.
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.10 | 2026-07-05 | DC0SK | §6c: CpalCapture/CpalSink audio-device adapter validated on the FT-991A USB codec — live spectrum from real RF, real audio-capture frames, static frontend serving. |
 | 0.9 | 2026-07-05 | DC0SK | Added §6c rig HIL execution record: rig control validated on a real Yaesu FT-991A (read/set freq 2 m+10 m, mode, S-meter, input-validation, audit); PTT + real spectrum/audio still deferred. |
 | 0.8 | 2026-07-05 | DC0SK | Added §6b Phase 2 execution record: spectrum/WS automated vs. browser-matrix/HIL status at the Phase 2 exit review. |
 | 0.7 | 2026-07-05 | DC0SK | Added §6a Phase 1 execution record (A27): automated / HIL / browser / deferred status per test-case group at the Phase 1 exit review. |

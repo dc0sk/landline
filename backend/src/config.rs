@@ -50,6 +50,12 @@ pub struct AudioConfig {
     pub jitter_target_frames: usize,
     /// Jitter-buffer maximum depth before a missing frame is concealed.
     pub jitter_max_frames: usize,
+    /// Capture device name substring (audio-device feature); `None` = default.
+    #[serde(default)]
+    pub capture_device: Option<String>,
+    /// Playback device name substring (audio-device feature); `None` = default.
+    #[serde(default)]
+    pub playback_device: Option<String>,
 }
 
 impl Default for AudioConfig {
@@ -60,6 +66,8 @@ impl Default for AudioConfig {
             bitrate_bps: 16_000,
             jitter_target_frames: 3,
             jitter_max_frames: 10,
+            capture_device: None,
+            playback_device: None,
         }
     }
 }
@@ -231,6 +239,11 @@ pub struct ServerConfig {
     pub bind: IpAddr,
     /// TCP port.
     pub port: u16,
+    /// Optional directory of static frontend files to serve at `/` (single-host
+    /// deployments). Unset = API only; the split-host topology serves the UI
+    /// from a separate origin behind the reverse proxy instead.
+    #[serde(default)]
+    pub static_dir: Option<PathBuf>,
 }
 
 impl Default for ServerConfig {
@@ -238,6 +251,7 @@ impl Default for ServerConfig {
         Self {
             bind: IpAddr::V4(Ipv4Addr::LOCALHOST),
             port: 8443,
+            static_dir: None,
         }
     }
 }
@@ -387,10 +401,14 @@ mod tests {
         assert_eq!(cfg.auth.users.len(), 1);
         assert_eq!(cfg.auth.users[0].name, "op");
 
-        let wrong: Config =
-            toml::from_str("[auth]\n[[users]]\nname = \"op\"\nrole = \"operator\"\npassword_hash = \"x\"\n")
-                .unwrap();
-        assert!(wrong.auth.users.is_empty(), "bare [[users]] must not populate auth.users");
+        let wrong: Config = toml::from_str(
+            "[auth]\n[[users]]\nname = \"op\"\nrole = \"operator\"\npassword_hash = \"x\"\n",
+        )
+        .unwrap();
+        assert!(
+            wrong.auth.users.is_empty(),
+            "bare [[users]] must not populate auth.users"
+        );
     }
 
     #[test]

@@ -74,12 +74,80 @@ struct PinSpec {
     direction: Direction,
 }
 
+/// Storage/hardware backend for raw pin levels. The allowlist and direction
+/// rules live in [`GpioController`]; a backend only reads/writes levels, so the
+/// hardware layer is swappable (in-memory off-Pi and in tests, character-device
+/// gpiod on the Pi with `--features gpio-device`).
+trait PinBackend: Send + Sync {
+    fn read(&self, pin: u8) -> Level;
+    fn write(&self, pin: u8, level: Level);
+}
+
+/// In-memory backend: holds levels in a map (used off-Pi and in tests).
+struct MemoryBackend {
+    state: Mutex<HashMap<u8, Level>>,
+}
+
+impl MemoryBackend {
+    fn seeded(config: &GpioConfig) -> Self {
+        let mut state = HashMap::new();
+        for pin in &config.pins {
+            state.insert(pin.pin, pin.safe_state);
+        }
+        Self {
+            state: Mutex::new(state),
+        }
+    }
+}
+
+impl PinBackend for MemoryBackend {
+    fn read(&self, pin: u8) -> Level {
+        self.state
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .get(&pin)
+            .copied()
+            .unwrap_or(Level::Low)
+    }
+
+    fn write(&self, pin: u8, level: Level) {
+        self.state
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .insert(pin, level);
+    }
+}
+
+/// Choose the pin backend: the real character-device backend when built with
+/// `--features gpio-device` and GPIO is enabled, otherwise in-memory. A failed
+/// hardware open degrades to in-memory rather than aborting startup.
+#[cfg(not(feature = "gpio-device"))]
+fn select_backend(config: &GpioConfig) -> Box<dyn PinBackend> {
+    Box::new(MemoryBackend::seeded(config))
+}
+
+#[cfg(feature = "gpio-device")]
+fn select_backend(config: &GpioConfig) -> Box<dyn PinBackend> {
+    if config.enabled {
+        match device::GpiodBackend::new(config) {
+            Ok(backend) => {
+                tracing::info!(pins = config.pins.len(), "gpio-device backend active");
+                return Box::new(backend);
+            }
+            Err(err) => {
+                tracing::warn!(error = %err, "gpio hardware init failed; using in-memory backend");
+            }
+        }
+    }
+    Box::new(MemoryBackend::seeded(config))
+}
+
 /// The GPIO controller (ARC-08): allowlist + safe-state enforcement over a
 /// pin-state backend.
 pub struct GpioController {
     enabled: bool,
     pins: HashMap<u8, PinSpec>,
-    state: Mutex<HashMap<u8, Level>>,
+    backend: Box<dyn PinBackend>,
 }
 
 impl GpioController {
@@ -88,10 +156,7 @@ impl GpioController {
     #[must_use]
     pub fn from_config(config: &GpioConfig) -> Self {
         let mut pins = HashMap::new();
-        let mut state = HashMap::new();
         for pin in &config.pins {
-            // Drive outputs (and seed input readbacks) to the safe startup state.
-            state.insert(pin.pin, pin.safe_state);
             pins.insert(
                 pin.pin,
                 PinSpec {
@@ -102,7 +167,7 @@ impl GpioController {
         Self {
             enabled: config.enabled,
             pins,
-            state: Mutex::new(state),
+            backend: select_backend(config),
         }
     }
 
@@ -119,13 +184,7 @@ impl GpioController {
     /// Returns [`GpioError`] if GPIO is disabled or the pin is not allowlisted.
     pub fn read(&self, pin: u8) -> Result<Level, GpioError> {
         self.spec(pin)?; // enabled + allowlist check
-        Ok(self
-            .state
-            .lock()
-            .unwrap_or_else(std::sync::PoisonError::into_inner)
-            .get(&pin)
-            .copied()
-            .unwrap_or(Level::Low))
+        Ok(self.backend.read(pin))
     }
 
     /// Set an output pin's level.
@@ -138,11 +197,69 @@ impl GpioController {
         if spec.direction != Direction::Out {
             return Err(GpioError::NotAnOutput);
         }
-        self.state
-            .lock()
-            .unwrap_or_else(std::sync::PoisonError::into_inner)
-            .insert(pin, level);
+        self.backend.write(pin, level);
         Ok(())
+    }
+}
+
+/// Character-device (`/dev/gpiochipN`) backend, built only with the
+/// `gpio-device` feature. Pure-Rust (gpio-cdev over ioctl), so the default
+/// build stays free of extra deps and never touches real hardware.
+#[cfg(feature = "gpio-device")]
+mod device {
+    use std::collections::HashMap;
+
+    use gpio_cdev::{Chip, LineHandle, LineRequestFlags};
+
+    use super::{Direction, Level, PinBackend};
+    use crate::config::GpioConfig;
+
+    pub struct GpiodBackend {
+        handles: HashMap<u8, LineHandle>,
+    }
+
+    impl GpiodBackend {
+        pub fn new(config: &GpioConfig) -> Result<Self, String> {
+            let path = config.chip.as_deref().unwrap_or("/dev/gpiochip0");
+            let mut chip = Chip::new(path).map_err(|e| e.to_string())?;
+            let mut handles = HashMap::new();
+            for pin in &config.pins {
+                let line = chip
+                    .get_line(u32::from(pin.pin))
+                    .map_err(|e| e.to_string())?;
+                // Outputs are requested with their safe state as the initial value,
+                // so the pin is driven safe the instant it is claimed (NFR-SEC-16).
+                let handle = match pin.direction {
+                    Direction::Out => line
+                        .request(
+                            LineRequestFlags::OUTPUT,
+                            u8::from(pin.safe_state == Level::High),
+                            "landline",
+                        )
+                        .map_err(|e| e.to_string())?,
+                    Direction::In => line
+                        .request(LineRequestFlags::INPUT, 0, "landline")
+                        .map_err(|e| e.to_string())?,
+                };
+                handles.insert(pin.pin, handle);
+            }
+            Ok(Self { handles })
+        }
+    }
+
+    impl PinBackend for GpiodBackend {
+        fn read(&self, pin: u8) -> Level {
+            match self.handles.get(&pin).and_then(|h| h.get_value().ok()) {
+                Some(1) => Level::High,
+                _ => Level::Low,
+            }
+        }
+
+        fn write(&self, pin: u8, level: Level) {
+            if let Some(handle) = self.handles.get(&pin) {
+                let _ = handle.set_value(u8::from(level == Level::High));
+            }
+        }
     }
 }
 
@@ -221,6 +338,7 @@ mod tests {
                     safe_state: Level::High,
                 },
             ],
+            chip: None,
         })
     }
 
@@ -268,6 +386,7 @@ mod tests {
                 direction: Direction::Out,
                 safe_state: Level::Low,
             }],
+            chip: None,
         });
         assert!(matches!(gpio.read(17), Err(GpioError::Disabled)));
         assert!(matches!(

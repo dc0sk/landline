@@ -138,6 +138,10 @@ pub struct GpioConfig {
     pub enabled: bool,
     /// Allowlisted pins. Any pin not listed is inaccessible (NFR-SEC-16).
     pub pins: Vec<GpioPinConfig>,
+    /// GPIO character device (gpio-device feature); `None` = `/dev/gpiochip0`
+    /// (Pi 4 header). Pi 5's 40-pin header is on `/dev/gpiochip4`.
+    #[serde(default)]
+    pub chip: Option<String>,
 }
 
 /// A single allowlisted GPIO pin.

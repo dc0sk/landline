@@ -43,6 +43,7 @@ fn app_with_gpio(users: Vec<UserConfig>) -> Router {
                     safe_state: Level::High,
                 },
             ],
+            chip: None,
         },
         ..Config::default()
     })

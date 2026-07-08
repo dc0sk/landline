@@ -65,7 +65,12 @@ breaker_cooldown_ms = 1000
 
 [gpio]
 # Raspberry Pi GPIO control (ARC-08). Disabled by default; enable on Pi targets.
+# Real pins are driven only with --features gpio-device (character device);
+# otherwise the controller is an in-memory model.
 enabled = false
+# GPIO character device. Default /dev/gpiochip0 (Pi 4 header); Pi 5's 40-pin
+# header is on /dev/gpiochip4. BCM pin number = line offset on that chip.
+# chip = "/dev/gpiochip0"
 # Only listed pins are reachable; every other pin is inaccessible (NFR-SEC-16).
 # Outputs are driven to `safe_state` at startup. direction: in|out, safe_state: low|high.
 # [[gpio.pins]]

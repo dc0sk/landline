@@ -120,7 +120,7 @@ Each item carries: **ID**, **Title**, **Priority**, **Phase**, **Estimate** (S/M
 
 **Note — BL-029:** In Progress. The S-meter read path is done (`GET /api/rig/smeter`, Observer+, FR-RIG-06 display). Continuous streaming at a configured cadence (TC-RIG-06) rides the Phase-2 WebSocket telemetry channel (ADR-02/ARC-06) alongside the spectrum stream, so it lands in Phase 2.
 
-**Note — BL-033:** Done. The ARC-08 GPIO controller enforces the pin allowlist and safe startup states (NFR-SEC-16) with Operator-gated, audited `/api/gpio/{pin}` endpoints, verified in-memory (TC-SEC-15). The Raspberry Pi sysfs/gpiod hardware backend is a thin deployment-time adapter; TC-GPIO-01 is a hardware-in-the-loop System test.
+**Note — BL-033:** Done. The ARC-08 GPIO controller enforces the pin allowlist and safe startup states (NFR-SEC-16) with Operator-gated, audited `/api/gpio/{pin}` endpoints, verified in-memory (TC-SEC-15). The real character-device hardware backend (`GpiodBackend`, `--features gpio-device`, gpio-cdev) is now implemented and **HIL-validated on a Pi** — TC-GPIO-01 passed with independent kernel-debugfs verification of safe-state + drive HIGH/LOW on a confirmed-unconnected pin (test-strategy §6c).
 
 **Note — security remainders closed:** BL-081 (config now rejects group/world-accessible files, 0600 enforced on Unix — NFR-SEC-03), BL-032 (global panic sanitisation via `catch_panic_layer` completes NFR-SEC-09 alongside the typed sanitised errors), and BL-100/101 (nginx TLS reverse-proxy config in `deploy/nginx/` delivers NFR-SEC-01/TC-SEC-01) are Done. With TLS delivered by the proxy, BL-021 (auth middleware) is now Done. BL-012 (secrets *rotation* policy) is now Done — see [security.md §8.2](security.md).
 

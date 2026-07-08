@@ -39,12 +39,15 @@ argon2.workspace = true
 rustfft.workspace = true
 opus = { workspace = true, optional = true }
 cpal = { workspace = true, optional = true }
+gpio-cdev = { workspace = true, optional = true }
 
-# Opt-in native/C features. Off by default so the reference aarch64 cross-build
-# needs no C toolchain; enable on the Pi build (--features opus,audio-device).
+# Opt-in deployment features. Off by default so the reference aarch64 cross-build
+# needs no C toolchain and pulls no extra deps; enable on the Pi build
+# (--features audio-device,gpio-device[,opus]).
 [features]
 opus = ["dep:opus"]
 audio-device = ["dep:cpal"]
+gpio-device = ["dep:gpio-cdev"]
 
 [dev-dependencies]
 tokio-tungstenite = "0.24"

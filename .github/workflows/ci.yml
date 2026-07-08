@@ -79,10 +79,12 @@ jobs:
         run: cargo test -p landline-backend --features opus
       # audio-device links ALSA and opens real devices at runtime (none in CI),
       # so build + clippy only — behavioural validation is HIL on the Pi.
-      - name: Build + lint audio-device feature
+      - name: Build + lint device features
         run: |
           cargo clippy -p landline-backend --features audio-device --all-targets -- -D warnings
           cargo build -p landline-backend --features audio-device
+          cargo clippy -p landline-backend --features gpio-device --all-targets -- -D warnings
+          cargo build -p landline-backend --features gpio-device
       - name: cargo audit
         run: |
           cargo install cargo-audit --locked

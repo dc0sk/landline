@@ -45,3 +45,7 @@ opus = "0.3"
 # system ALSA (C) on Linux, so it is off by default (C-free cross-build). Built
 # natively on the Pi to capture/play the rig's USB audio codec.
 cpal = "0.15"
+# GPIO character-device access — OPTIONAL, behind the backend `gpio-device`
+# feature. Pure-Rust (ioctl over /dev/gpiochipN), but off by default so the
+# default build pulls no extra deps and never opens real hardware.
+gpio-cdev = "0.6"

@@ -179,3 +179,45 @@ output {
   border-radius: 8px;
   image-rendering: pixelated;
 }
+
+/* GPIO panel: one row per allowlisted pin, with a level badge and (for
+   outputs) a toggle button. */
+#gpio-panel {
+  margin-top: 1rem;
+}
+
+#gpio-panel h2 {
+  font-size: 1rem;
+  margin: 0 0 0.5rem;
+}
+
+.gpio-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.gpio-row > span:first-child {
+  flex: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.gpio-level {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+}
+
+.gpio-level.gpio-high {
+  color: #04310f;
+  background: #34d058;
+}
+
+.gpio-level.gpio-low {
+  color: var(--muted, #8a8a8a);
+  background: transparent;
+}

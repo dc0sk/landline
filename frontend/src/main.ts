@@ -16,6 +16,7 @@ import {
   type RigMode,
 } from "./control.ts";
 import { AudioPlayer, MicCapture } from "./audio-player.ts";
+import { GpioPanel } from "./gpio-panel.ts";
 import { Session } from "./session.ts";
 import { browserSocket } from "./socket.ts";
 import { TelemetryClient } from "./telemetry-client.ts";
@@ -35,6 +36,7 @@ let telemetryClient: TelemetryClient | null = null;
 let audioPlayer: AudioPlayer | null = null;
 let micCapture: MicCapture | null = null;
 let waterfallRenderer: WaterfallRenderer | null = null;
+let gpioPanel: GpioPanel | null = null;
 
 function wsUrl(): string {
   if (BASE_URL) {
@@ -65,6 +67,14 @@ function startTelemetry(): void {
     onError: (message) => showRigError(message),
   });
   telemetryClient.start();
+
+  gpioPanel = new GpioPanel({
+    container: byId("gpio-list"),
+    api,
+    token: () => session.current?.accessToken ?? null,
+    onError: (message) => showRigError(message),
+  });
+  gpioPanel.start();
 }
 
 function stopTelemetry(): void {
@@ -74,6 +84,8 @@ function stopTelemetry(): void {
   audioPlayer?.stop();
   audioPlayer = null;
   waterfallRenderer = null;
+  gpioPanel?.stop();
+  gpioPanel = null;
 }
 
 function fillDeviceSelect(select: HTMLSelectElement, devices: AudioDevice[]): void {

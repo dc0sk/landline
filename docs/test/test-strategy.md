@@ -1,8 +1,8 @@
 ---
 title: "Test Strategy & Traceability"
 status: Draft
-version: "0.10"
-updated: 2026-07-05
+version: "0.11"
+updated: 2026-07-08
 authors:
   - Simon Keimer (DC0SK)
 owns: [TC]
@@ -323,14 +323,15 @@ operator's safety limit.
 | TC-SPEC-01 (real RF) | Integration | **HIL — pass** | With `--features audio-device`, the `CpalCapture` adapter opens the rig's USB codec and the spectrum WS delivers **live** FFT frames — peak bin and noise floor vary frame-to-frame (real audio), unlike the fixed synthetic tone. |
 | TC-AUD (real capture) | Integration | **HIL — pass** | Binary audio WS frames stream from the same capture tap (seq-incrementing, non-empty). With `--features audio-device,opus` they are Opus-encoded; content-listening is a browser test. |
 | Static frontend serving | Integration | **HIL — pass** | `[server] static_dir` serves the UI at `/` on the API origin: `GET /`, `/styles.css`, `/dist/main.js`, `/healthz` all 200. |
+| TC-GPIO-01 / NFR-SEC-16 | Integration | **HIL — pass** | With `--features gpio-device`, the `GpiodBackend` drives real pins on `/dev/gpiochip0`. Independently verified via kernel debugfs (`/sys/kernel/debug/gpio`, not the API's own readback): pin 17 claimed `out lo` at startup (safe state); API HIGH → debugfs `out hi`; LOW → `out lo`. Allowlist: non-listed pin 5 → 403; input pin 27 driven → 400; `gpio.set` audited. Pin 17 confirmed unconnected by the operator. |
 
 **Bug found & fixed:** login initially 401'd — the config example used `[[users]]` instead of
 `[[auth.users]]`, so no users loaded (fixed + regression-tested, PR #31).
 
-**Disposition:** rig-control **and** real spectrum/audio-capture HIL are **green** (CpalCapture/
-CpalSink adapter validated on the FT-991A USB codec). Remaining HIL: PTT (needs dummy load),
-in-browser audio *playback* (PCM works; Opus needs browser-side decode, BL-072), GPIO, and the
-browser matrix.
+**Disposition:** rig-control, real spectrum/audio-capture, **and GPIO** HIL are **green**
+(CpalCapture/CpalSink + GpiodBackend adapters validated on the FT-991A / Pi hardware). Remaining
+HIL: PTT (needs dummy load), in-browser audio *playback* (PCM works; Opus needs browser-side
+decode, BL-072), and the browser matrix.
 
 ---
 
@@ -338,6 +339,7 @@ browser matrix.
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.11 | 2026-07-08 | DC0SK | §6c: GpiodBackend GPIO validated on real Pi hardware — kernel-debugfs-verified safe state + drive HIGH/LOW on pin 17, allowlist/direction enforcement (TC-GPIO-01/NFR-SEC-16). |
 | 0.10 | 2026-07-05 | DC0SK | §6c: CpalCapture/CpalSink audio-device adapter validated on the FT-991A USB codec — live spectrum from real RF, real audio-capture frames, static frontend serving. |
 | 0.9 | 2026-07-05 | DC0SK | Added §6c rig HIL execution record: rig control validated on a real Yaesu FT-991A (read/set freq 2 m+10 m, mode, S-meter, input-validation, audit); PTT + real spectrum/audio still deferred. |
 | 0.8 | 2026-07-05 | DC0SK | Added §6b Phase 2 execution record: spectrum/WS automated vs. browser-matrix/HIL status at the Phase 2 exit review. |

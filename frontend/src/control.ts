@@ -91,3 +91,33 @@ export async function getSmeter(api: ApiClient, accessToken: string): Promise<nu
   const response = await api.get<SmeterResponse>("/api/rig/smeter", accessToken);
   return response.strength;
 }
+
+export type GpioDirection = "in" | "out";
+export type GpioLevel = "low" | "high";
+
+/** An allowlisted GPIO pin with its direction and current level (FR-GPIO-01). */
+export interface GpioPin {
+  readonly pin: number;
+  readonly direction: GpioDirection;
+  readonly level: GpioLevel;
+}
+
+/** List the allowlisted GPIO pins with their current levels. */
+export async function listGpio(api: ApiClient, accessToken: string): Promise<GpioPin[]> {
+  return api.get<GpioPin[]>("/api/gpio", accessToken);
+}
+
+/** Drive an output GPIO pin to a level (FR-GPIO-01). Requires the Operator role. */
+export async function setGpio(
+  api: ApiClient,
+  accessToken: string,
+  pin: number,
+  level: GpioLevel,
+): Promise<void> {
+  await api.post(`/api/gpio/${pin}`, accessToken, { level });
+}
+
+/** The opposite level (for a toggle control). */
+export function toggledLevel(level: GpioLevel): GpioLevel {
+  return level === "high" ? "low" : "high";
+}

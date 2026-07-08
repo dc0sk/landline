@@ -5,9 +5,12 @@ import {
   getFrequency,
   getMode,
   getSmeter,
+  listGpio,
   setFrequency,
+  setGpio,
   setMode,
   setPtt,
+  toggledLevel,
 } from "./control.ts";
 
 /** A fetch mock that records the last request and returns `body` as JSON. */
@@ -82,4 +85,26 @@ test("getSmeter reads the strength", async () => {
   const { fetchMock } = recorder({ strength: -54 });
   const api = new ApiClient({ baseUrl: "http://x", fetch: fetchMock, now: () => 0 });
   assert.equal(await getSmeter(api, "tok"), -54);
+});
+
+test("listGpio returns the pin list", async () => {
+  const pins = [{ pin: 17, direction: "out", level: "low" }];
+  const { seen, fetchMock } = recorder(pins);
+  const api = new ApiClient({ baseUrl: "http://x", fetch: fetchMock, now: () => 0 });
+  assert.deepEqual(await listGpio(api, "tok"), pins);
+  assert.equal(seen.method, "GET");
+});
+
+test("setGpio POSTs the level to the pin path", async () => {
+  const { seen, fetchMock } = recorder(null, 204);
+  const api = new ApiClient({ baseUrl: "http://x", fetch: fetchMock, now: () => 0 });
+  await setGpio(api, "tok", 17, "high");
+  assert.equal(seen.method, "POST");
+  assert.equal(seen.auth, "Bearer tok");
+  assert.deepEqual(JSON.parse(seen.body ?? "null"), { level: "high" });
+});
+
+test("toggledLevel flips the level", () => {
+  assert.equal(toggledLevel("low"), "high");
+  assert.equal(toggledLevel("high"), "low");
 });

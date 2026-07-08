@@ -200,6 +200,26 @@ impl GpioController {
         self.backend.write(pin, level);
         Ok(())
     }
+
+    /// List every allowlisted pin with its direction and current level, sorted by
+    /// pin number. Empty when GPIO is disabled (so the UI can render "no pins").
+    #[must_use]
+    pub fn list(&self) -> Vec<PinInfo> {
+        if !self.enabled {
+            return Vec::new();
+        }
+        let mut infos: Vec<PinInfo> = self
+            .pins
+            .iter()
+            .map(|(pin, spec)| PinInfo {
+                pin: *pin,
+                direction: spec.direction,
+                level: self.backend.read(*pin),
+            })
+            .collect();
+        infos.sort_by_key(|info| info.pin);
+        infos
+    }
 }
 
 /// Character-device (`/dev/gpiochipN`) backend, built only with the
@@ -265,13 +285,36 @@ mod device {
 
 /// Router for the `/api/gpio/*` endpoints (Operator-gated).
 pub fn router() -> Router {
-    Router::new().route("/api/gpio/{pin}", get(read_pin).post(set_pin))
+    Router::new()
+        .route("/api/gpio", get(list_pins))
+        .route("/api/gpio/{pin}", get(read_pin).post(set_pin))
 }
 
 #[derive(Serialize)]
 struct PinResponse {
     pin: u8,
     level: Level,
+}
+
+/// One allowlisted pin's direction and current level (the `GET /api/gpio` list).
+#[derive(Serialize)]
+pub struct PinInfo {
+    /// BCM pin number.
+    pub pin: u8,
+    /// Whether the pin is an input or output.
+    pub direction: Direction,
+    /// Current level.
+    pub level: Level,
+}
+
+async fn list_pins(
+    user: AuthUser,
+    Extension(gpio): Extension<std::sync::Arc<GpioController>>,
+) -> Response {
+    if let Err(err) = user.require(Role::Operator) {
+        return err.into_response();
+    }
+    Json(gpio.list()).into_response()
 }
 
 #[derive(Deserialize)]
@@ -375,6 +418,30 @@ mod tests {
             gpio.set(27, Level::Low),
             Err(GpioError::NotAnOutput)
         ));
+    }
+
+    #[test]
+    fn list_returns_sorted_pins_with_levels() {
+        let gpio = controller();
+        gpio.set(17, Level::High).unwrap();
+        let list = gpio.list();
+        assert_eq!(list.len(), 2);
+        assert_eq!((list[0].pin, list[0].level), (17, Level::High));
+        assert_eq!((list[1].pin, list[1].direction), (27, Direction::In));
+    }
+
+    #[test]
+    fn list_is_empty_when_disabled() {
+        let gpio = GpioController::from_config(&GpioConfig {
+            enabled: false,
+            pins: vec![GpioPinConfig {
+                pin: 17,
+                direction: Direction::Out,
+                safe_state: Level::Low,
+            }],
+            chip: None,
+        });
+        assert!(gpio.list().is_empty());
     }
 
     #[test]

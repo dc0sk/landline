@@ -54,6 +54,44 @@ fn select_device(
     default
 }
 
+/// Pick a supported config range that covers `sample_rate_hz` and pin it to
+/// exactly that rate.
+///
+/// Split out from the stream builders (which need real hardware) so the
+/// range-matching itself is unit-testable: this is the logic that decides
+/// whether the pipeline runs at the rate everything else assumes.
+fn supported_at_rate<R: SupportedRange>(
+    mut ranges: impl Iterator<Item = R>,
+    sample_rate_hz: u32,
+) -> Option<R::Config> {
+    let target = cpal::SampleRate(sample_rate_hz);
+    ranges
+        .find(|range| range.min_rate() <= target && target <= range.max_rate())
+        .map(|range| range.pin_to(target))
+}
+
+/// The shape of a cpal supported-config range, so [`supported_at_rate`] can be
+/// tested against a stand-in instead of a sound card.
+trait SupportedRange {
+    type Config;
+    fn min_rate(&self) -> cpal::SampleRate;
+    fn max_rate(&self) -> cpal::SampleRate;
+    fn pin_to(self, rate: cpal::SampleRate) -> Self::Config;
+}
+
+impl SupportedRange for cpal::SupportedStreamConfigRange {
+    type Config = cpal::SupportedStreamConfig;
+    fn min_rate(&self) -> cpal::SampleRate {
+        self.min_sample_rate()
+    }
+    fn max_rate(&self) -> cpal::SampleRate {
+        self.max_sample_rate()
+    }
+    fn pin_to(self, rate: cpal::SampleRate) -> Self::Config {
+        self.with_sample_rate(rate)
+    }
+}
+
 /// A capture tap: a `SampleSource` view over one of the capture ring buffers.
 pub struct CaptureTap {
     ring: Ring,
@@ -81,10 +119,21 @@ impl CpalCapture {
     /// Open the input device (name-matched or default) and start capturing into
     /// `tap_count` independent ring buffers.
     ///
+    /// `sample_rate_hz` is requested explicitly rather than accepting the
+    /// device default: ALSA's default for a device whose range spans it is
+    /// commonly 44.1 kHz, and silently capturing at a rate the rest of the
+    /// pipeline does not know about pitch-shifts the audio and mislabels the
+    /// spectrum's frequency axis. If the device cannot do the configured rate
+    /// this fails loudly rather than running at the wrong one.
+    ///
     /// # Errors
-    /// Returns a message if no input device/config is available or the stream
-    /// cannot be built.
-    pub fn new(device_name: Option<String>, tap_count: usize) -> Result<Self, String> {
+    /// Returns a message if no input device is available, the device cannot
+    /// capture at `sample_rate_hz`, or the stream cannot be built.
+    pub fn new(
+        device_name: Option<String>,
+        tap_count: usize,
+        sample_rate_hz: u32,
+    ) -> Result<Self, String> {
         let taps: Vec<Ring> = (0..tap_count.max(1))
             .map(|_| Arc::new(Mutex::new(VecDeque::new())))
             .collect();
@@ -100,7 +149,15 @@ impl CpalCapture {
                     host.default_input_device(),
                 )
                 .ok_or_else(|| "no input device".to_string())?;
-                let supported = device.default_input_config().map_err(|e| e.to_string())?;
+                let supported = supported_at_rate(
+                    device
+                        .supported_input_configs()
+                        .map_err(|e| e.to_string())?,
+                    sample_rate_hz,
+                )
+                .ok_or_else(|| {
+                    format!("input device does not support {sample_rate_hz} Hz capture")
+                })?;
                 let channels = supported.channels() as usize;
                 let format = supported.sample_format();
                 let config: cpal::StreamConfig = supported.into();
@@ -181,10 +238,13 @@ pub struct CpalSink {
 impl CpalSink {
     /// Open the output device (name-matched or default) and start playback.
     ///
+    /// `sample_rate_hz` is requested explicitly — see [`CpalCapture::new`] for
+    /// why the device default is not good enough.
+    ///
     /// # Errors
-    /// Returns a message if no output device/config is available or the stream
-    /// cannot be built.
-    pub fn new(device_name: Option<String>) -> Result<Self, String> {
+    /// Returns a message if no output device is available, the device cannot
+    /// play at `sample_rate_hz`, or the stream cannot be built.
+    pub fn new(device_name: Option<String>, sample_rate_hz: u32) -> Result<Self, String> {
         let ring: Ring = Arc::new(Mutex::new(VecDeque::new()));
         let ring_for_thread = ring.clone();
         let (tx, rx) = std::sync::mpsc::channel::<Result<(), String>>();
@@ -198,7 +258,15 @@ impl CpalSink {
                     host.default_output_device(),
                 )
                 .ok_or_else(|| "no output device".to_string())?;
-                let supported = device.default_output_config().map_err(|e| e.to_string())?;
+                let supported = supported_at_rate(
+                    device
+                        .supported_output_configs()
+                        .map_err(|e| e.to_string())?,
+                    sample_rate_hz,
+                )
+                .ok_or_else(|| {
+                    format!("output device does not support {sample_rate_hz} Hz playback")
+                })?;
                 let channels = supported.channels() as usize;
                 let format = supported.sample_format();
                 let config: cpal::StreamConfig = supported.into();
@@ -270,5 +338,80 @@ impl AudioSink for CpalSink {
                 ring.pop_front();
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{supported_at_rate, SupportedRange};
+
+    /// A stand-in for a cpal supported-config range, so the rate matching can be
+    /// tested without a sound card. Returns the rate it was pinned to.
+    struct FakeRange {
+        min: u32,
+        max: u32,
+    }
+
+    impl SupportedRange for FakeRange {
+        type Config = u32;
+        fn min_rate(&self) -> cpal::SampleRate {
+            cpal::SampleRate(self.min)
+        }
+        fn max_rate(&self) -> cpal::SampleRate {
+            cpal::SampleRate(self.max)
+        }
+        fn pin_to(self, rate: cpal::SampleRate) -> u32 {
+            rate.0
+        }
+    }
+
+    fn ranges() -> Vec<FakeRange> {
+        vec![
+            FakeRange {
+                min: 8_000,
+                max: 44_100,
+            },
+            FakeRange {
+                min: 8_000,
+                max: 192_000,
+            },
+        ]
+    }
+
+    #[test]
+    fn picks_a_range_covering_the_requested_rate() {
+        // 48 kHz is outside the first range and inside the second: the matcher
+        // must keep looking rather than settle for the first entry, which is
+        // exactly the ALSA layout that made the device default 44.1 kHz.
+        assert_eq!(
+            supported_at_rate(ranges().into_iter(), 48_000),
+            Some(48_000)
+        );
+    }
+
+    #[test]
+    fn pins_to_the_requested_rate_not_the_range_maximum() {
+        // The chosen range spans up to 192 kHz; the stream must run at the rate
+        // the rest of the pipeline assumes, not at whatever the range allows.
+        assert_eq!(
+            supported_at_rate(ranges().into_iter(), 16_000),
+            Some(16_000)
+        );
+    }
+
+    #[test]
+    fn reports_no_match_rather_than_substituting_a_rate() {
+        // Silently substituting a supported rate is the bug being fixed: the
+        // caller must be able to fail loudly instead.
+        assert_eq!(supported_at_rate(ranges().into_iter(), 384_000), None);
+    }
+
+    #[test]
+    fn boundary_rates_are_inclusive() {
+        assert_eq!(
+            supported_at_rate(ranges().into_iter(), 44_100),
+            Some(44_100)
+        );
+        assert_eq!(supported_at_rate(ranges().into_iter(), 8_000), Some(8_000));
     }
 }

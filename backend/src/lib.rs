@@ -108,6 +108,7 @@ pub fn app_with_ptt(config: &Config) -> (Router, Arc<PttGuard>) {
         source: audio_source,
         codec,
         sink: audio_sink,
+        sample_rate: config.audio.sample_rate_hz,
         frame_samples: frame_samples.max(1),
         frame_period: Duration::from_millis(u64::from(config.audio.frame_ms.max(1))),
     });
@@ -172,10 +173,15 @@ fn audio_io(config: &Config, tone_hz: f32) -> AudioIo {
     };
 
     #[cfg(feature = "audio-device")]
-    match crate::audio_device::CpalCapture::new(config.audio.capture_device.clone(), 2) {
+    match crate::audio_device::CpalCapture::new(
+        config.audio.capture_device.clone(),
+        2,
+        config.audio.sample_rate_hz,
+    ) {
         Ok(capture) => {
             let sink: Arc<dyn AudioSink> = match crate::audio_device::CpalSink::new(
                 config.audio.playback_device.clone(),
+                config.audio.sample_rate_hz,
             ) {
                 Ok(sink) => Arc::new(sink),
                 Err(err) => {

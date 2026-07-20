@@ -168,3 +168,31 @@ test("a reconnect with no session stops instead of looping unauthenticated", () 
   reconnected.onopen!();
   assert.deepEqual(reconnected.sent, [], "must not send an auth frame with no token");
 });
+
+test("reports the server's audio sample rate on ready", () => {
+  // The client must play at the rate the server captures at. Hardcoding 48 kHz
+  // pitch-shifts playback whenever the rig's codec runs at another rate.
+  const sockets: FakeSocket[] = [];
+  let reported: number | null = null;
+  const client = new TelemetryClient({
+    url: "wss://x/ws",
+    token: () => "tok",
+    connect: () => {
+      const s = new FakeSocket();
+      sockets.push(s);
+      return s;
+    },
+    scheduler: noopScheduler,
+    onReady: (rate) => {
+      reported = rate;
+    },
+    onFrame: () => {},
+  });
+  client.start();
+  const socket = sockets[0]!;
+  socket.onopen!();
+  socket.onmessage!({
+    data: JSON.stringify({ type: "ready", role: "operator", audio_sample_rate: 44100 }),
+  });
+  assert.equal(reported, 44100);
+});

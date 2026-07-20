@@ -186,3 +186,67 @@ fn post_json_auth(uri: &str, bearer: &str, body: &Value) -> Request<Body> {
         .body(Body::from(serde_json::to_vec(body).unwrap()))
         .unwrap()
 }
+
+fn auth_with_user() -> landline_backend::auth::Auth {
+    landline_backend::auth::Auth::from_config(
+        &config_with(vec![user("op", Role::Operator, "pw")]).auth,
+    )
+}
+
+/// Median of a small sample, which is far more robust than a mean on a shared
+/// CI runner where a single scheduling hiccup can dominate an average. Five
+/// samples keeps this honest without making it the slowest test in the suite —
+/// Argon2 is ~0.5 s per call in a debug build.
+fn median_login_time(auth: &landline_backend::auth::Auth, name: &str, password: &str) -> f64 {
+    let mut samples: Vec<f64> = (0..5)
+        .map(|_| {
+            let start = std::time::Instant::now();
+            let _ = auth.login(name, password);
+            start.elapsed().as_secs_f64()
+        })
+        .collect();
+    samples.sort_by(f64::total_cmp);
+    samples[samples.len() / 2]
+}
+
+#[tokio::test]
+async fn unknown_user_costs_the_same_as_a_wrong_password() {
+    // NFR-SEC-12 (no credential oracle). Returning early on an unknown name made
+    // login a user-enumeration oracle: measured 25 ns for an unknown user vs
+    // 19.3 ms for a known one with a wrong password — a ratio of ~773,000,
+    // readable over any network. Both paths must do the same Argon2 work.
+    let auth = auth_with_user();
+
+    // Warm up: first call touches lazily-initialised state in argon2.
+    let _ = auth.login("op", "wrong");
+    let _ = auth.login("nosuchuser", "wrong");
+
+    let unknown = median_login_time(&auth, "definitely-no-such-user", "wrong");
+    let known = median_login_time(&auth, "op", "wrong");
+
+    // Deliberately loose: this must catch the ~6-orders-of-magnitude regression
+    // that a short-circuit reintroduces, without being a flaky micro-benchmark.
+    // Both paths now run one Argon2 verification, so the honest ratio is ~1.
+    let ratio = unknown / known;
+    assert!(
+        ratio > 0.25,
+        "unknown-user login returns far too fast ({unknown:?} vs {known:?}, ratio {ratio:.6}); \
+         the user-enumeration timing oracle is back"
+    );
+}
+
+#[tokio::test]
+async fn unknown_user_and_wrong_password_are_indistinguishable_in_the_response() {
+    // Negative control for the timing test above: equal timing is only useful if
+    // the responses are also identical. If these ever diverge, the oracle moved
+    // from the clock to the response body rather than being closed.
+    let auth = auth_with_user();
+    let unknown = auth.login("definitely-no-such-user", "wrong");
+    let wrong_password = auth.login("op", "wrong");
+    assert!(unknown.is_err() && wrong_password.is_err());
+    assert_eq!(
+        format!("{}", unknown.unwrap_err()),
+        format!("{}", wrong_password.unwrap_err()),
+        "unknown user and wrong password must be indistinguishable"
+    );
+}

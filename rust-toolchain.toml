@@ -1,5 +1,13 @@
 [toolchain]
-channel = "stable"
+# PINNED, not floating. `channel = "stable"` resolved to whatever each machine
+# had last downloaded: CI fetched 1.97 while a developer box sat on 1.94, so a
+# clippy lint added in between (`duration_suboptimal_units`) failed CI on a
+# change whose local gate was green. A pinned version makes `cargo xtask ci`
+# locally and the CI gate the same compiler, so local green predicts CI green.
+# Bump deliberately (and fix any new lints in that same change), never
+# implicitly. This is separate from `rust-version` in Cargo.toml, which is the
+# MSRV consumers must satisfy.
+channel = "1.97.1"
 components = ["rustfmt", "clippy"]
 # The aarch64 Raspberry Pi target (NFR-DEPLOY-01) is added explicitly in CI and
 # by developers who cross-compile — see .cargo/config.toml — rather than pinned

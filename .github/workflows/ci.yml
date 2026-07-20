@@ -59,10 +59,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt, clippy
-          targets: aarch64-unknown-linux-gnu
+      # No version here on purpose: `rust-toolchain.toml` is the single source
+      # of truth, so CI and developer machines compile with the *same*
+      # compiler. `@stable` used to install whatever was current, which drifted
+      # from local toolchains and let a clippy lint fail CI on a change whose
+      # local gate was green. `rustup show` materialises the pinned toolchain
+      # (and its components) from that file.
+      - name: Install pinned toolchain (from rust-toolchain.toml)
+        run: |
+          rustup show
+          rustup target add aarch64-unknown-linux-gnu
+          rustc --version
       - uses: Swatinem/rust-cache@v2
       - name: rustfmt
         run: cargo fmt --all -- --check

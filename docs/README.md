@@ -1,8 +1,8 @@
 ---
 title: "landline — Documentation & RE Process"
 status: Draft
-version: "0.6.3"
-updated: 2026-07-10
+version: "0.6.4"
+updated: 2026-07-21
 authors:
   - Simon Keimer (DC0SK)
 owns: []
@@ -47,6 +47,7 @@ by a build-breaking gate.
 | [user-manual.md](user-manual.md) | Operator user manual — signing in and using rig control, spectrum, audio, and GPIO from the browser | — |
 | [release-checklist.md](release-checklist.md) | Go/no-go release gate (traceability, security, deployment, license) | — |
 | [documentation-review.md](documentation-review.md) | Documentation gaps and improvement backlog | — |
+| [reviews/loose-ends-audit-2026-07.md](reviews/loose-ends-audit-2026-07.md) | Multi-agent codebase audit: verified findings, what was fixed, what remains | — |
 
 ## 1a. Document conventions
 
@@ -201,6 +202,7 @@ The exhaustive per-ID table is maintained alongside the migration commit; the
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.6.4 | 2026-07-21 | DC0SK | Added reviews/loose-ends-audit-2026-07.md to the document map. |
 | 0.6.3 | 2026-07-10 | DC0SK | Added user-manual.md (operator user manual) to the document map. |
 | 0.6.2 | 2026-07-05 | DC0SK | Added release-checklist.md to the document map. |
 | 0.6.1 | 2026-07-04 | DC0SK | Fixed stale `scripts/trace-gate` references to the actual `scripts/trace-gate.py` path; added action-list.md to the document map. |

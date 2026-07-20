@@ -113,7 +113,8 @@ async fn session(
     spectrum: Arc<SpectrumRuntime>,
     audio: Arc<AudioRuntime>,
 ) {
-    let Some(claims) = authenticate(&mut socket, &auth, spectrum.auth_timeout).await else {
+    let Some((claims, token)) = authenticate(&mut socket, &auth, spectrum.auth_timeout).await
+    else {
         return;
     };
     // All authenticated roles may view telemetry / hear RX audio (STK-01/02);
@@ -132,9 +133,19 @@ async fn session(
     let rate = spectrum.update_rate_hz.clamp(1.0, 10.0);
     let mut spectrum_ticker = tokio::time::interval(Duration::from_secs_f32(1.0 / rate));
     let mut audio_ticker = tokio::time::interval(audio.frame_period);
+    let mut auth_ticker = tokio::time::interval(AUTH_RECHECK_INTERVAL);
 
     loop {
         tokio::select! {
+            // Re-check the credential for the life of the socket (FR-AUTH-02/05).
+            // Authenticating only at connect would let a logged-out or expired
+            // token keep streaming until the client chose to disconnect.
+            _ = auth_ticker.tick() => {
+                if auth.verify(&token).is_err() {
+                    reject(&mut socket, "session ended").await;
+                    break;
+                }
+            }
             incoming = socket.recv() => {
                 match incoming {
                     Some(Ok(Message::Text(text))) => {
@@ -201,7 +212,18 @@ async fn session(
     }
 }
 
-async fn authenticate(socket: &mut WebSocket, auth: &Auth, timeout: Duration) -> Option<Claims> {
+/// How often an open session re-verifies its access token. Verification is a
+/// local HMAC check plus a map lookup, so this is cheap; the interval bounds how
+/// long a revoked or expired credential can keep streaming.
+const AUTH_RECHECK_INTERVAL: Duration = Duration::from_secs(1);
+
+/// Authenticate the first message. Returns the claims **and the token**, which
+/// the session keeps so it can re-verify expiry and revocation as it runs.
+async fn authenticate(
+    socket: &mut WebSocket,
+    auth: &Auth,
+    timeout: Duration,
+) -> Option<(Claims, String)> {
     let first = tokio::time::timeout(timeout, socket.recv()).await;
     let Ok(Some(Ok(Message::Text(text)))) = first else {
         reject(socket, "authentication required").await;
@@ -213,7 +235,7 @@ async fn authenticate(socket: &mut WebSocket, auth: &Auth, timeout: Duration) ->
         return None;
     };
     if let Ok(claims) = auth.verify(&token) {
-        Some(claims)
+        Some((claims, token))
     } else {
         reject(socket, "invalid token").await;
         None

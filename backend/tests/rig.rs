@@ -141,7 +141,7 @@ async fn manual_unkey_confirms_before_clearing_state() {
     let (addr, log) = spawn_mock_rigctld_opts(true).await;
     let rig = Arc::new(adapter_for(addr));
     // Long timeout: this test is about the manual path, not the safety timer.
-    let ptt = PttGuard::new(Arc::clone(&rig), Duration::from_secs(60));
+    let ptt = PttGuard::new(Arc::clone(&rig), Duration::from_secs(30));
 
     ptt.activate().await.unwrap();
     assert!(ptt.is_active());
@@ -183,7 +183,7 @@ async fn shutdown_unkeys_an_active_ptt() {
     // rig keyed with nothing left running to release it.
     let (addr, log) = spawn_mock_rigctld_opts(false).await;
     let rig = Arc::new(adapter_for(addr));
-    let ptt = PttGuard::new(Arc::clone(&rig), Duration::from_secs(60));
+    let ptt = PttGuard::new(Arc::clone(&rig), Duration::from_secs(30));
 
     ptt.activate().await.unwrap();
     ptt.shutdown().await;

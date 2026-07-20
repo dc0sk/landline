@@ -38,6 +38,8 @@ export class TelemetryClient {
   private readonly onFrame: ((frame: SpectrumFrame) => void) | undefined;
   private readonly onAudio: ((frame: AudioFrame) => void) | undefined;
   private readonly onError: ((message: string) => void) | undefined;
+  /** Set from the `ready` frame; false until the server names a codec we decode. */
+  private audioCodecSupported = false;
 
   constructor(options: TelemetryClientOptions) {
     this.token = options.token;
@@ -79,7 +81,14 @@ export class TelemetryClient {
 
   private handle(data: string | ArrayBuffer): void {
     if (data instanceof ArrayBuffer) {
-      this.onAudio?.(parseAudioFrame(data));
+      // Defensive: never interpret bytes we did not agree a codec for.
+      if (!this.audioCodecSupported) {
+        return;
+      }
+      const frame = parseAudioFrame(data);
+      if (frame !== null) {
+        this.onAudio?.(frame);
+      }
       return;
     }
     let message: Record<string, unknown>;
@@ -89,16 +98,28 @@ export class TelemetryClient {
       return;
     }
     switch (message["type"]) {
-      case "ready":
+      case "ready": {
         this.onReady?.(Number(message["audio_sample_rate"]));
         // Subscribe to exactly the streams the caller asked for.
         if (this.onFrame) {
           this.socket.send(JSON.stringify({ type: "subscribe", stream: "spectrum" }));
         }
+        // Only subscribe to audio if we can actually decode the wire codec.
+        // This browser build handles raw PCM only; subscribing to Opus and
+        // reinterpreting its bytes as PCM produces noise, not audio.
+        const codec = String(message["audio_codec"] ?? "pcm");
+        this.audioCodecSupported = codec === "pcm";
         if (this.onAudio) {
-          this.socket.send(JSON.stringify({ type: "subscribe", stream: "audio" }));
+          if (this.audioCodecSupported) {
+            this.socket.send(JSON.stringify({ type: "subscribe", stream: "audio" }));
+          } else {
+            this.onError?.(
+              `server audio codec "${codec}" is not supported by this client; audio disabled`,
+            );
+          }
         }
         break;
+      }
       case "spectrum":
         this.onFrame?.({
           seq: Number(message["seq"]),

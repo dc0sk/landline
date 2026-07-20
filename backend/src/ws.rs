@@ -87,6 +87,10 @@ enum ServerMessage {
         /// Audio sample rate in Hz. Sent so the client plays at the rate the
         /// server actually captures at, instead of assuming one.
         audio_sample_rate: u32,
+        /// Wire codec for binary audio frames (`pcm` or `opus`). A client that
+        /// cannot decode it must refuse the stream rather than reinterpret the
+        /// bytes — Opus payloads read as PCM are noise.
+        audio_codec: &'static str,
     },
     Error {
         message: String,
@@ -129,6 +133,7 @@ async fn session(
         &ServerMessage::Ready {
             role: claims.role,
             audio_sample_rate: audio.sample_rate,
+            audio_codec: audio.codec.name(),
         },
     )
     .await

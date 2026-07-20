@@ -10,8 +10,12 @@ export interface AudioFrame {
 }
 
 /** Parse a binary WS audio frame: 8-byte little-endian sequence header followed
- *  by little-endian 16-bit PCM. */
-export function parseAudioFrame(buffer: ArrayBuffer): AudioFrame {
+ *  by little-endian 16-bit PCM. Returns null for a frame that is not valid PCM:
+ *  too short for the header, or an odd payload length (Int16Array would throw). */
+export function parseAudioFrame(buffer: ArrayBuffer): AudioFrame | null {
+  if (buffer.byteLength < 8 || (buffer.byteLength - 8) % 2 !== 0) {
+    return null;
+  }
   const view = new DataView(buffer);
   const seq = Number(view.getBigUint64(0, true));
   const pcm = new Int16Array(buffer.slice(8)); // browsers are little-endian

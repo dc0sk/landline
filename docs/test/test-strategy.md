@@ -1,7 +1,7 @@
 ---
 title: "Test Strategy & Traceability"
 status: Draft
-version: "0.13"
+version: "0.14"
 updated: 2026-07-20
 authors:
   - Simon Keimer (DC0SK)
@@ -347,6 +347,7 @@ decode, BL-072), and the browser matrix.
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.14 | 2026-07-20 | DC0SK | GPIO hardware failures now propagate instead of being swallowed (audit finding): fault-injection tests cover the error path the real gpiod backend cannot exercise in CI. |
 | 0.13 | 2026-07-20 | DC0SK | TC-AUTH-02/05 extended to the WebSocket path: an open socket must stop streaming on token expiry or logout (audit finding — auth ran only at connect). |
 | 0.12 | 2026-07-20 | DC0SK | TC-SEC-07 strengthened: asserts the unkey command reaching the rig (mock rigctld) rather than an internal flag; records the PTT unkey-confirmation and shutdown-unkey defects found by the loose-ends audit. |
 | 0.11 | 2026-07-08 | DC0SK | §6c: GpiodBackend GPIO validated on real Pi hardware — kernel-debugfs-verified safe state + drive HIGH/LOW on pin 17, allowlist/direction enforcement (TC-GPIO-01/NFR-SEC-16). |

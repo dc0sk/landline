@@ -99,7 +99,8 @@ export type GpioLevel = "low" | "high";
 export interface GpioPin {
   readonly pin: number;
   readonly direction: GpioDirection;
-  readonly level: GpioLevel;
+  /** Current level, or null when the pin could not be read. */
+  readonly level: GpioLevel | null;
 }
 
 /** List the allowlisted GPIO pins with their current levels. */

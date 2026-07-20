@@ -56,6 +56,11 @@ pub enum GpioError {
     /// Attempted to drive an input pin.
     #[error("pin is not an output")]
     NotAnOutput,
+    /// The hardware operation failed (ioctl error, line unavailable). Reported
+    /// rather than swallowed: a pin that did not move must not read as success,
+    /// or the audit log records a state change that never happened.
+    #[error("gpio hardware error")]
+    Hardware,
 }
 
 impl IntoResponse for GpioError {
@@ -65,6 +70,7 @@ impl IntoResponse for GpioError {
             // Non-allowlisted pins are inaccessible (NFR-SEC-16).
             GpioError::NotAllowed => (StatusCode::FORBIDDEN, "pin not allowed"),
             GpioError::NotAnOutput => (StatusCode::BAD_REQUEST, "pin is not an output"),
+            GpioError::Hardware => (StatusCode::BAD_GATEWAY, "gpio hardware error"),
         };
         (status, body).into_response()
     }
@@ -79,8 +85,12 @@ struct PinSpec {
 /// hardware layer is swappable (in-memory off-Pi and in tests, character-device
 /// gpiod on the Pi with `--features gpio-device`).
 trait PinBackend: Send + Sync {
-    fn read(&self, pin: u8) -> Level;
-    fn write(&self, pin: u8, level: Level);
+    /// Read a pin's level, or [`GpioError::Hardware`] if the hardware operation
+    /// failed. A failure must never be reported as a level: an unreadable pin
+    /// defaulting to `Low` would read as "safe" for an interlock input.
+    fn read(&self, pin: u8) -> Result<Level, GpioError>;
+    /// Drive a pin, or [`GpioError::Hardware`] if the hardware operation failed.
+    fn write(&self, pin: u8, level: Level) -> Result<(), GpioError>;
 }
 
 /// In-memory backend: holds levels in a map (used off-Pi and in tests).
@@ -101,20 +111,22 @@ impl MemoryBackend {
 }
 
 impl PinBackend for MemoryBackend {
-    fn read(&self, pin: u8) -> Level {
-        self.state
+    fn read(&self, pin: u8) -> Result<Level, GpioError> {
+        Ok(self
+            .state
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner)
             .get(&pin)
             .copied()
-            .unwrap_or(Level::Low)
+            .unwrap_or(Level::Low))
     }
 
-    fn write(&self, pin: u8, level: Level) {
+    fn write(&self, pin: u8, level: Level) -> Result<(), GpioError> {
         self.state
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner)
             .insert(pin, level);
+        Ok(())
     }
 }
 
@@ -184,7 +196,7 @@ impl GpioController {
     /// Returns [`GpioError`] if GPIO is disabled or the pin is not allowlisted.
     pub fn read(&self, pin: u8) -> Result<Level, GpioError> {
         self.spec(pin)?; // enabled + allowlist check
-        Ok(self.backend.read(pin))
+        self.backend.read(pin)
     }
 
     /// Set an output pin's level.
@@ -197,8 +209,7 @@ impl GpioController {
         if spec.direction != Direction::Out {
             return Err(GpioError::NotAnOutput);
         }
-        self.backend.write(pin, level);
-        Ok(())
+        self.backend.write(pin, level)
     }
 
     /// List every allowlisted pin with its direction and current level, sorted by
@@ -214,7 +225,9 @@ impl GpioController {
             .map(|(pin, spec)| PinInfo {
                 pin: *pin,
                 direction: spec.direction,
-                level: self.backend.read(*pin),
+                // `None` when the hardware read failed: the UI must show
+                // "unknown", never a level the pin may not actually be at.
+                level: self.backend.read(*pin).ok(),
             })
             .collect();
         infos.sort_by_key(|info| info.pin);
@@ -231,7 +244,7 @@ mod device {
 
     use gpio_cdev::{Chip, LineHandle, LineRequestFlags};
 
-    use super::{Direction, Level, PinBackend};
+    use super::{Direction, GpioError, Level, PinBackend};
     use crate::config::GpioConfig;
 
     pub struct GpiodBackend {
@@ -268,17 +281,23 @@ mod device {
     }
 
     impl PinBackend for GpiodBackend {
-        fn read(&self, pin: u8) -> Level {
-            match self.handles.get(&pin).and_then(|h| h.get_value().ok()) {
-                Some(1) => Level::High,
-                _ => Level::Low,
-            }
+        fn read(&self, pin: u8) -> Result<Level, GpioError> {
+            let handle = self.handles.get(&pin).ok_or(GpioError::Hardware)?;
+            let value = handle.get_value().map_err(|err| {
+                tracing::error!(pin, error = %err, "gpio read failed");
+                GpioError::Hardware
+            })?;
+            Ok(if value == 1 { Level::High } else { Level::Low })
         }
 
-        fn write(&self, pin: u8, level: Level) {
-            if let Some(handle) = self.handles.get(&pin) {
-                let _ = handle.set_value(u8::from(level == Level::High));
-            }
+        fn write(&self, pin: u8, level: Level) -> Result<(), GpioError> {
+            let handle = self.handles.get(&pin).ok_or(GpioError::Hardware)?;
+            handle
+                .set_value(u8::from(level == Level::High))
+                .map_err(|err| {
+                    tracing::error!(pin, error = %err, "gpio write failed");
+                    GpioError::Hardware
+                })
         }
     }
 }
@@ -303,8 +322,8 @@ pub struct PinInfo {
     pub pin: u8,
     /// Whether the pin is an input or output.
     pub direction: Direction,
-    /// Current level.
-    pub level: Level,
+    /// Current level, or `None` if the pin could not be read.
+    pub level: Option<Level>,
 }
 
 async fn list_pins(
@@ -363,8 +382,91 @@ async fn set_pin(
 
 #[cfg(test)]
 mod tests {
-    use super::{Direction, GpioController, GpioError, Level};
+    use super::{Direction, GpioController, GpioError, Level, MemoryBackend, PinBackend, PinSpec};
     use crate::config::{GpioConfig, GpioPinConfig};
+    use std::collections::HashMap;
+
+    /// A backend whose hardware operations always fail, standing in for a real
+    /// ioctl error (wrong chip, line contention, unplugged expander). The gpiod
+    /// backend cannot run in CI, so this is how the propagation path is proven.
+    struct FailingBackend;
+
+    impl PinBackend for FailingBackend {
+        fn read(&self, _pin: u8) -> Result<Level, GpioError> {
+            Err(GpioError::Hardware)
+        }
+
+        fn write(&self, _pin: u8, _level: Level) -> Result<(), GpioError> {
+            Err(GpioError::Hardware)
+        }
+    }
+
+    /// A controller over the given backend, with the same allowlist as
+    /// [`controller`], so a test can exercise hardware failure independently of
+    /// the allowlist and direction rules.
+    fn controller_with(backend: Box<dyn PinBackend>) -> GpioController {
+        let mut pins = HashMap::new();
+        pins.insert(
+            17,
+            PinSpec {
+                direction: Direction::Out,
+            },
+        );
+        pins.insert(
+            27,
+            PinSpec {
+                direction: Direction::In,
+            },
+        );
+        GpioController {
+            enabled: true,
+            pins,
+            backend,
+        }
+    }
+
+    #[test]
+    fn hardware_failure_is_reported_not_swallowed() {
+        // A failed ioctl must surface as an error, not as a successful set. The
+        // caller audits `gpio.set` on Ok, so swallowing the failure would record
+        // a state change that never reached the wire.
+        let gpio = controller_with(Box::new(FailingBackend));
+        assert!(matches!(
+            gpio.set(17, Level::High),
+            Err(GpioError::Hardware)
+        ));
+        assert!(matches!(gpio.read(27), Err(GpioError::Hardware)));
+    }
+
+    #[test]
+    fn unreadable_pin_lists_as_unknown_not_low() {
+        // `Low` is the safe state for these pins, so defaulting an unreadable
+        // pin to Low would render as "safe" in the UI for a pin nobody can read.
+        let gpio = controller_with(Box::new(FailingBackend));
+        let list = gpio.list();
+        assert_eq!(list.len(), 2);
+        assert!(
+            list.iter().all(|info| info.level.is_none()),
+            "an unreadable pin must list as unknown, not as a level"
+        );
+    }
+
+    #[test]
+    fn memory_backend_reports_success() {
+        // Guards the negative control: the failure tests above must be failing
+        // because of the backend, not because the propagation is broken for all.
+        let gpio = controller_with(Box::new(MemoryBackend::seeded(&GpioConfig {
+            enabled: true,
+            pins: vec![GpioPinConfig {
+                pin: 17,
+                direction: Direction::Out,
+                safe_state: Level::Low,
+            }],
+            ..GpioConfig::default()
+        })));
+        assert!(gpio.set(17, Level::High).is_ok());
+        assert_eq!(gpio.read(17).unwrap(), Level::High);
+    }
 
     fn controller() -> GpioController {
         GpioController::from_config(&GpioConfig {
@@ -426,7 +528,7 @@ mod tests {
         gpio.set(17, Level::High).unwrap();
         let list = gpio.list();
         assert_eq!(list.len(), 2);
-        assert_eq!((list[0].pin, list[0].level), (17, Level::High));
+        assert_eq!((list[0].pin, list[0].level), (17, Some(Level::High)));
         assert_eq!((list[1].pin, list[1].direction), (27, Direction::In));
     }
 

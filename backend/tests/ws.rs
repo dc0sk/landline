@@ -168,6 +168,8 @@ async fn authenticated_client_receives_spectrum_frames() {
     let ready = as_json(ws.next().await.unwrap().unwrap()).unwrap();
     assert_eq!(ready["type"], "ready");
     assert_eq!(ready["role"], "operator");
+    // The client must be told the audio rate rather than assuming one.
+    assert_eq!(ready["audio_sample_rate"], 48_000);
 
     send_json(&mut ws, &json!({"type": "subscribe", "stream": "spectrum"})).await;
 

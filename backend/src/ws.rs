@@ -36,6 +36,8 @@ pub struct AudioRuntime {
     pub codec: Arc<dyn Codec>,
     /// Sink for received transmit audio (rig TX; no-op until the Pi adapter).
     pub sink: Arc<dyn AudioSink>,
+    /// Capture/playback sample rate in Hz, advertised to clients on `ready`.
+    pub sample_rate: u32,
     /// Samples per audio frame.
     pub frame_samples: usize,
     /// One frame per this period (e.g. 20 ms).
@@ -82,6 +84,9 @@ enum StreamKind {
 enum ServerMessage {
     Ready {
         role: Role,
+        /// Audio sample rate in Hz. Sent so the client plays at the rate the
+        /// server actually captures at, instead of assuming one.
+        audio_sample_rate: u32,
     },
     Error {
         message: String,
@@ -119,9 +124,15 @@ async fn session(
     };
     // All authenticated roles may view telemetry / hear RX audio (STK-01/02);
     // state-changing control is not exposed here (per-message-type ACL — ADR-02).
-    if send(&mut socket, &ServerMessage::Ready { role: claims.role })
-        .await
-        .is_err()
+    if send(
+        &mut socket,
+        &ServerMessage::Ready {
+            role: claims.role,
+            audio_sample_rate: audio.sample_rate,
+        },
+    )
+    .await
+    .is_err()
     {
         return;
     }

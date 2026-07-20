@@ -34,6 +34,7 @@ const session = new Session();
 let pttActive = false;
 let telemetryClient: TelemetryClient | null = null;
 let audioPlayer: AudioPlayer | null = null;
+let audioPlayerRate: number | null = null;
 let micCapture: MicCapture | null = null;
 let waterfallRenderer: WaterfallRenderer | null = null;
 let gpioPanel: GpioPanel | null = null;
@@ -56,12 +57,14 @@ function startTelemetry(): void {
     return;
   }
   waterfallRenderer = new WaterfallRenderer(context, { minDb: -90, maxDb: -10 });
-  audioPlayer = new AudioPlayer(48_000);
-  audioPlayer.start();
+  // The audio player is created on `ready`, once the server has told us the
+  // rate it captures at. Hardcoding a rate here plays back at the wrong speed
+  // whenever the rig's codec is not running at that rate.
   telemetryClient = new TelemetryClient({
     url: wsUrl(),
     token: () => session.current?.accessToken ?? null,
     connect: browserSocket,
+    onReady: (audioSampleRate) => startAudioPlayer(audioSampleRate),
     onFrame: (frame) => waterfallRenderer?.push(frame.bins),
     onAudio: (frame) => audioPlayer?.push(frame),
     onError: (message) => showRigError(message),
@@ -77,12 +80,29 @@ function startTelemetry(): void {
   gpioPanel.start();
 }
 
+/** (Re)start playback at the server's rate. A reconnect re-announces it, so an
+ *  unchanged rate reuses the running player rather than rebuilding it. */
+function startAudioPlayer(sampleRate: number): void {
+  if (!Number.isFinite(sampleRate) || sampleRate <= 0) {
+    showRigError("server did not report a usable audio sample rate");
+    return;
+  }
+  if (audioPlayer !== null && audioPlayerRate === sampleRate) {
+    return;
+  }
+  audioPlayer?.stop();
+  audioPlayer = new AudioPlayer(sampleRate);
+  audioPlayerRate = sampleRate;
+  audioPlayer.start();
+}
+
 function stopTelemetry(): void {
   stopMicTx();
   telemetryClient?.stop();
   telemetryClient = null;
   audioPlayer?.stop();
   audioPlayer = null;
+  audioPlayerRate = null;
   waterfallRenderer = null;
   gpioPanel?.stop();
   gpioPanel = null;

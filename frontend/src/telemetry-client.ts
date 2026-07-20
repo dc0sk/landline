@@ -23,6 +23,8 @@ export interface TelemetryClientOptions {
    */
   readonly token: () => string | null;
   readonly connect: (url: string) => WebSocketLike;
+  /** Called on `ready` with the server's audio sample rate (Hz). */
+  readonly onReady?: (audioSampleRate: number) => void;
   readonly onFrame?: (frame: SpectrumFrame) => void;
   readonly onAudio?: (frame: AudioFrame) => void;
   readonly onError?: (message: string) => void;
@@ -32,12 +34,14 @@ export interface TelemetryClientOptions {
 export class TelemetryClient {
   private readonly socket: ReconnectingSocket;
   private readonly token: () => string | null;
+  private readonly onReady: ((audioSampleRate: number) => void) | undefined;
   private readonly onFrame: ((frame: SpectrumFrame) => void) | undefined;
   private readonly onAudio: ((frame: AudioFrame) => void) | undefined;
   private readonly onError: ((message: string) => void) | undefined;
 
   constructor(options: TelemetryClientOptions) {
     this.token = options.token;
+    this.onReady = options.onReady;
     this.onFrame = options.onFrame;
     this.onAudio = options.onAudio;
     this.onError = options.onError;
@@ -86,6 +90,7 @@ export class TelemetryClient {
     }
     switch (message["type"]) {
       case "ready":
+        this.onReady?.(Number(message["audio_sample_rate"]));
         // Subscribe to exactly the streams the caller asked for.
         if (this.onFrame) {
           this.socket.send(JSON.stringify({ type: "subscribe", stream: "spectrum" }));

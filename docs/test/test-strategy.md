@@ -1,7 +1,7 @@
 ---
 title: "Test Strategy & Traceability"
 status: Draft
-version: "0.14"
+version: "0.15"
 updated: 2026-07-20
 authors:
   - Simon Keimer (DC0SK)
@@ -347,6 +347,7 @@ decode, BL-072), and the browser matrix.
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.15 | 2026-07-20 | DC0SK | Audio sample rate is now requested from the device and advertised to clients rather than assumed at both ends (audit finding). Rate-matching unit-tested; the device-negotiation half still needs HIL on the FT-991A codec. |
 | 0.14 | 2026-07-20 | DC0SK | GPIO hardware failures now propagate instead of being swallowed (audit finding): fault-injection tests cover the error path the real gpiod backend cannot exercise in CI. |
 | 0.13 | 2026-07-20 | DC0SK | TC-AUTH-02/05 extended to the WebSocket path: an open socket must stop streaming on token expiry or logout (audit finding — auth ran only at connect). |
 | 0.12 | 2026-07-20 | DC0SK | TC-SEC-07 strengthened: asserts the unkey command reaching the rig (mock rigctld) rather than an internal flag; records the PTT unkey-confirmation and shutdown-unkey defects found by the loose-ends audit. |

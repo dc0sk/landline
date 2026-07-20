@@ -176,6 +176,18 @@ impl Default for AuditConfig {
     }
 }
 
+/// Default WebSocket message budget per session, per second. Legitimate
+/// transmit audio is 50 frames/s at the default 20 ms framing, so this leaves
+/// generous headroom for control messages while still bounding a flood.
+fn default_ws_messages_per_sec() -> u32 {
+    200
+}
+
+/// Default cap on concurrent WebSocket sessions.
+fn default_max_ws_sessions() -> usize {
+    8
+}
+
 /// Security middleware configuration (ARC-03).
 #[derive(Debug, Clone, Deserialize)]
 #[serde(default)]
@@ -184,6 +196,16 @@ pub struct SecurityConfig {
     pub rate_limit_per_sec: u32,
     /// Maximum accepted request body size in bytes (NFR-SEC-05, default 64 KiB).
     pub max_body_bytes: usize,
+    /// Maximum WebSocket messages per second accepted from one session
+    /// (NFR-SEC-04). The HTTP limit is far too low to reuse: legitimate
+    /// transmit audio is one frame every `audio.frame_ms` (50/s at the default
+    /// 20 ms), so this is sized well above that.
+    #[serde(default = "default_ws_messages_per_sec")]
+    pub ws_messages_per_sec: u32,
+    /// Maximum concurrent WebSocket sessions (NFR-SEC-04). Each session runs an
+    /// FFT and an encode per tick, so this bounds CPU as well as memory.
+    #[serde(default = "default_max_ws_sessions")]
+    pub max_ws_sessions: usize,
     /// CORS origin allowlist; only these origins are permitted (NFR-SEC-06).
     /// Empty means no cross-origin requests are allowed.
     pub allowed_origins: Vec<String>,
@@ -193,6 +215,8 @@ impl Default for SecurityConfig {
     fn default() -> Self {
         Self {
             rate_limit_per_sec: 10,
+            ws_messages_per_sec: default_ws_messages_per_sec(),
+            max_ws_sessions: default_max_ws_sessions(),
             max_body_bytes: 64 * 1024,
             allowed_origins: Vec::new(),
         }

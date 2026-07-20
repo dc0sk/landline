@@ -54,16 +54,31 @@ async fn start_with_users(
     access_ttl_secs: u64,
     users: Vec<UserConfig>,
 ) -> (SocketAddr, (String, String)) {
+    start_with_security(access_ttl_secs, users, permissive_security()).await
+}
+
+/// Rate limits permissive enough not to interfere with tests that are about
+/// something else. Tests that exercise a limit set it explicitly.
+fn permissive_security() -> SecurityConfig {
+    SecurityConfig {
+        rate_limit_per_sec: 1000,
+        ..SecurityConfig::default()
+    }
+}
+
+/// As [`start_with_users`], with caller-chosen security limits.
+async fn start_with_security(
+    access_ttl_secs: u64,
+    users: Vec<UserConfig>,
+    security: SecurityConfig,
+) -> (SocketAddr, (String, String)) {
     let config = Config {
         auth: AuthConfig {
             access_ttl_secs,
             refresh_ttl_secs: 3600,
             users,
         },
-        security: SecurityConfig {
-            rate_limit_per_sec: 1000,
-            ..SecurityConfig::default()
-        },
+        security,
         spectrum: SpectrumConfig {
             fft_size: 256,
             update_rate_hz: 10.0,
@@ -431,5 +446,162 @@ async fn observer_tx_audio_is_denied_and_audited() {
             .iter()
             .any(|e| e["action"] == "ws.tx_audio" && e["outcome"] == "success"),
         "an Observer's TX frame must never be accepted"
+    );
+}
+
+type WsStream =
+    tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>;
+
+async fn open_authenticated(addr: SocketAddr, token: &str) -> WsStream {
+    let (mut ws, _) = connect_async(format!("ws://{addr}/ws")).await.unwrap();
+    send_json(&mut ws, &json!({"type": "auth", "token": token})).await;
+    let ready = as_json(ws.next().await.unwrap().unwrap()).unwrap();
+    assert_eq!(ready["type"], "ready", "handshake should succeed");
+    ws
+}
+
+#[tokio::test]
+async fn message_flood_on_one_session_is_rejected() {
+    // NFR-SEC-04: the HTTP rate limiter is a per-request Tower layer, so it
+    // debits one token for the upgrade and never runs again. Without a
+    // per-session budget an authenticated client can flood messages for the
+    // life of the socket at no cost.
+    let (addr, _) = start_with_security(
+        900,
+        vec![UserConfig {
+            name: "op".to_owned(),
+            role: Role::Operator,
+            password_hash: hash_password("pw").unwrap(),
+        }],
+        SecurityConfig {
+            rate_limit_per_sec: 1000,
+            ws_messages_per_sec: 10,
+            ..SecurityConfig::default()
+        },
+    )
+    .await;
+    let (token, _) = login_at(addr, "op", "pw").await;
+    let mut ws = open_authenticated(addr, &token).await;
+
+    // Well past the 10/s budget, sent as fast as possible so refill cannot keep
+    // up. The server must refuse rather than serve them all.
+    for _ in 0..100 {
+        if ws
+            .send(WsMessage::Text(
+                json!({"type": "subscribe", "stream": "spectrum"}).to_string(),
+            ))
+            .await
+            .is_err()
+        {
+            break; // server already closed the socket
+        }
+    }
+
+    let closed = tokio::time::timeout(std::time::Duration::from_secs(10), async {
+        while let Some(message) = ws.next().await {
+            match message {
+                Ok(WsMessage::Close(_)) | Err(_) => return true,
+                // Match the parsed message type, not a substring of the raw
+                // text: every spectrum frame contains "sample_rate", so a
+                // `contains("rate")` check passes even with the budget disabled.
+                Ok(other) => {
+                    if let Some(value) = as_json(other) {
+                        if value["type"] == "error" {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        true
+    })
+    .await;
+    assert!(
+        closed.unwrap_or(false),
+        "a message flood must be refused, not served for the life of the socket"
+    );
+}
+
+#[tokio::test]
+async fn a_normal_message_rate_is_not_rejected() {
+    // Negative control for the flood test: the budget must not be so tight that
+    // ordinary use trips it, or the test above would pass for the wrong reason.
+    // The default budget is sized above the 50 frames/s of legitimate TX audio.
+    let (addr, _) = start_with_users(
+        900,
+        vec![UserConfig {
+            name: "op".to_owned(),
+            role: Role::Operator,
+            password_hash: hash_password("pw").unwrap(),
+        }],
+    )
+    .await;
+    let (token, _) = login_at(addr, "op", "pw").await;
+    let mut ws = open_authenticated(addr, &token).await;
+
+    send_json(&mut ws, &json!({"type": "subscribe", "stream": "spectrum"})).await;
+    // A burst comfortably inside the default 200/s budget.
+    for seq in 0..20u64 {
+        let mut frame = seq.to_le_bytes().to_vec();
+        frame.extend_from_slice(&0i16.to_le_bytes());
+        ws.send(WsMessage::Binary(frame)).await.unwrap();
+    }
+
+    // Spectrum frames must still arrive: the session is alive and unthrottled.
+    let got_frame = tokio::time::timeout(std::time::Duration::from_secs(10), async {
+        while let Some(Ok(message)) = ws.next().await {
+            if let Some(value) = as_json(message) {
+                if value["type"] == "spectrum" {
+                    return true;
+                }
+                if value["type"] == "error" {
+                    return false;
+                }
+            }
+        }
+        false
+    })
+    .await;
+    assert_eq!(
+        got_frame.ok(),
+        Some(true),
+        "ordinary traffic must not trip the message budget"
+    );
+}
+
+#[tokio::test]
+async fn concurrent_sessions_are_capped() {
+    // NFR-SEC-04: each session runs an FFT and an encode per tick, so unbounded
+    // concurrent sockets are a CPU lever even for one authenticated user.
+    let (addr, _) = start_with_security(
+        900,
+        vec![UserConfig {
+            name: "op".to_owned(),
+            role: Role::Operator,
+            password_hash: hash_password("pw").unwrap(),
+        }],
+        SecurityConfig {
+            rate_limit_per_sec: 1000,
+            max_ws_sessions: 2,
+            ..SecurityConfig::default()
+        },
+    )
+    .await;
+    let (token, _) = login_at(addr, "op", "pw").await;
+
+    // Hold the two permitted sessions open.
+    let _first = open_authenticated(addr, &token).await;
+    let _second = open_authenticated(addr, &token).await;
+
+    // The third is refused before it can authenticate.
+    let (mut third, _) = connect_async(format!("ws://{addr}/ws")).await.unwrap();
+    let reply = as_json(third.next().await.unwrap().unwrap()).unwrap();
+    assert_eq!(reply["type"], "error");
+    assert!(
+        reply["message"]
+            .as_str()
+            .unwrap_or_default()
+            .contains("session"),
+        "third session must be refused with a session-cap error, got {reply:?}"
     );
 }

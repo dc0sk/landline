@@ -95,6 +95,16 @@ test("listGpio returns the pin list", async () => {
   assert.equal(seen.method, "GET");
 });
 
+test("listGpio carries a null level through for an unreadable pin", async () => {
+  // The backend sends level: null when the hardware read failed. It must reach
+  // the caller as null, not be coerced to a level the pin may not be at.
+  const pins = [{ pin: 17, direction: "out", level: null }];
+  const { fetchMock } = recorder(pins);
+  const api = new ApiClient({ baseUrl: "http://x", fetch: fetchMock, now: () => 0 });
+  const listed = await listGpio(api, "tok");
+  assert.equal(listed[0]?.level, null);
+});
+
 test("setGpio POSTs the level to the pin path", async () => {
   const { seen, fetchMock } = recorder(null, 204);
   const api = new ApiClient({ baseUrl: "http://x", fetch: fetchMock, now: () => 0 });

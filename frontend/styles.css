@@ -221,3 +221,9 @@ output {
   color: var(--muted, #8a8a8a);
   background: transparent;
 }
+
+/* Unreadable pin: visibly a fault, not a quiet "low". */
+.gpio-level.gpio-unknown {
+  color: #3d2b00;
+  background: #f0b429;
+}

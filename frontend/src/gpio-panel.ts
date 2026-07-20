@@ -78,14 +78,19 @@ export class GpioPanel {
     label.textContent = `GPIO${pin.pin} (${pin.direction})`;
 
     const level = document.createElement("span");
-    level.className = `gpio-level gpio-${pin.level}`;
-    level.textContent = pin.level.toUpperCase();
+    // A pin the backend could not read has no level: show it as unknown rather
+    // than defaulting to a level the pin may not actually be at.
+    level.className = `gpio-level gpio-${pin.level ?? "unknown"}`;
+    level.textContent = pin.level === null ? "UNKNOWN" : pin.level.toUpperCase();
 
     row.append(label, level);
 
     if (pin.direction === "out") {
       const button = document.createElement("button");
       button.type = "button";
+      // With the level unknown there is no meaningful toggle target, so the
+      // control is disabled rather than guessing a direction to drive.
+      button.disabled = pin.level === null;
       button.textContent = pin.level === "high" ? "Set LOW" : "Set HIGH";
       button.addEventListener("click", () => void this.toggle(pin));
       row.append(button);
@@ -99,6 +104,7 @@ export class GpioPanel {
       return;
     }
     try {
+      if (pin.level === null) return;
       await setGpio(this.api, token, pin.pin, toggledLevel(pin.level));
       await this.refresh();
     } catch {

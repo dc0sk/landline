@@ -7,7 +7,7 @@ use std::path::Path;
 use std::process::ExitCode;
 
 use landline_backend::config::{Config, ConfigError};
-use landline_backend::{app, telemetry};
+use landline_backend::{app_with_ptt, telemetry};
 
 #[tokio::main]
 async fn main() -> ExitCode {
@@ -22,7 +22,7 @@ async fn main() -> ExitCode {
     };
 
     let addr = config.server.socket_addr();
-    let app = app(&config);
+    let (app, ptt) = app_with_ptt(&config);
 
     let listener = match tokio::net::TcpListener::bind(addr).await {
         Ok(listener) => listener,
@@ -35,10 +35,15 @@ async fn main() -> ExitCode {
 
     // Connect-info makes the peer address available to the rate limiter (ARC-03).
     let service = app.into_make_service_with_connect_info::<std::net::SocketAddr>();
-    if let Err(err) = axum::serve(listener, service)
+    let result = axum::serve(listener, service)
         .with_graceful_shutdown(shutdown_signal())
-        .await
-    {
+        .await;
+
+    // Release the transmitter before the runtime (and the PTT safety timer with
+    // it) goes away: a SIGTERM mid-transmission must never leave the rig keyed.
+    ptt.shutdown().await;
+
+    if let Err(err) = result {
         tracing::error!(error = %err, "server error");
         return ExitCode::FAILURE;
     }

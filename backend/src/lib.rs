@@ -58,6 +58,14 @@ use crate::ws::{AudioRuntime, SpectrumRuntime};
 /// Serve this with `into_make_service_with_connect_info::<SocketAddr>()` so the
 /// rate limiter can key on the peer IP.
 pub fn app(config: &Config) -> Router {
+    app_with_ptt(config).0
+}
+
+/// Build the application and also return the [`PttGuard`] wired into it.
+///
+/// `main` needs the guard so shutdown can unkey a still-active transmitter
+/// before the Tokio runtime — and with it the safety timer — goes away.
+pub fn app_with_ptt(config: &Config) -> (Router, Arc<PttGuard>) {
     let auth = Arc::new(Auth::from_config(&config.auth));
     let audit = Arc::new(AuditLog::from_config(&config.audit));
     let rig = Arc::new(RigAdapter::from_config(&config.rig));
@@ -125,10 +133,11 @@ pub fn app(config: &Config) -> Router {
         None => base,
     };
 
-    base.layer(Extension(auth))
+    let router = base
+        .layer(Extension(auth))
         .layer(Extension(audit))
         .layer(Extension(rig))
-        .layer(Extension(ptt))
+        .layer(Extension(Arc::clone(&ptt)))
         .layer(Extension(gpio))
         .layer(Extension(spectrum))
         .layer(Extension(audio_runtime))
@@ -136,7 +145,9 @@ pub fn app(config: &Config) -> Router {
         .layer(RequestBodyLimitLayer::new(config.security.max_body_bytes))
         .layer(TraceLayer::new_for_http())
         // Outermost: catch any handler panic and return a sanitised 500 (NFR-SEC-09).
-        .layer(security::catch_panic_layer())
+        .layer(security::catch_panic_layer());
+
+    (router, ptt)
 }
 
 /// Build the spectrum source, audio-RX source, and audio-TX sink. With the

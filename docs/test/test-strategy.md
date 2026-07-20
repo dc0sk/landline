@@ -1,8 +1,8 @@
 ---
 title: "Test Strategy & Traceability"
 status: Draft
-version: "0.11"
-updated: 2026-07-08
+version: "0.12"
+updated: 2026-07-20
 authors:
   - Simon Keimer (DC0SK)
 owns: [TC]
@@ -180,7 +180,7 @@ A test passes when:
 | `TC-SEC-04` | `NFR-SEC-04` | Send 20 control commands/s from one client; verify rate limit triggers after 10/s | Security | Not written |
 | `TC-SEC-05` | `NFR-SEC-05` | Send oversized WebSocket frame (> 64 KB); verify backend closes connection cleanly | Security | Not written |
 | `TC-SEC-06` | `NFR-SEC-06` | Send request with disallowed Origin header; verify CORS rejection | Security | Not written |
-| `TC-SEC-07` | `NFR-SEC-07` | PTT timeout: leave PTT active; verify server deactivates after safety timeout | Security | Not written |
+| `TC-SEC-07` | `NFR-SEC-07` | PTT timeout: leave PTT active; verify the server sends the unkey **to the rig** after the safety timeout, keeps PTT reported active if the rig does not confirm, and unkeys on shutdown | Security | Pass (unit/integration, mock rigctld) |
 | `TC-SEC-08` | `NFR-SEC-08` | Send mode parameter with shell metacharacters; verify rejection without command execution | Security | Not written |
 | `TC-SEC-09` | `NFR-SEC-09` | Trigger server error; verify response body contains no stack trace or file paths | Security | Not written |
 | `TC-SEC-10` | `NFR-SEC-12` | Capture HTTP/WS traffic; verify no token or credential in URL query strings | Security | Not written |
@@ -328,6 +328,14 @@ operator's safety limit.
 **Bug found & fixed:** login initially 401'd — the config example used `[[users]]` instead of
 `[[auth.users]]`, so no users loaded (fixed + regression-tested, PR #31).
 
+**Bug found & fixed (audit, 2026-07-20):** the PTT safety timeout cleared its internal `active`
+flag *before* — and regardless of whether — the rig confirmed the unkey, and the sole TC-SEC-07
+test asserted that flag rather than the command reaching the rig; deleting the real unkey call
+left the suite green. Shutdown also never unkeyed, so a SIGTERM mid-transmission dropped the
+safety timer with the rig still keyed. Both fixed and now covered by mock-rigctld tests that
+assert on the recorded `T 0` command. **Evidence tier: mock rigctld only** — the PTT path still
+has no HIL evidence and remains deferred pending a dummy load.
+
 **Disposition:** rig-control, real spectrum/audio-capture, **and GPIO** HIL are **green**
 (CpalCapture/CpalSink + GpiodBackend adapters validated on the FT-991A / Pi hardware). Remaining
 HIL: PTT (needs dummy load), in-browser audio *playback* (PCM works; Opus needs browser-side
@@ -339,6 +347,7 @@ decode, BL-072), and the browser matrix.
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.12 | 2026-07-20 | DC0SK | TC-SEC-07 strengthened: asserts the unkey command reaching the rig (mock rigctld) rather than an internal flag; records the PTT unkey-confirmation and shutdown-unkey defects found by the loose-ends audit. |
 | 0.11 | 2026-07-08 | DC0SK | §6c: GpiodBackend GPIO validated on real Pi hardware — kernel-debugfs-verified safe state + drive HIGH/LOW on pin 17, allowlist/direction enforcement (TC-GPIO-01/NFR-SEC-16). |
 | 0.10 | 2026-07-05 | DC0SK | §6c: CpalCapture/CpalSink audio-device adapter validated on the FT-991A USB codec — live spectrum from real RF, real audio-capture frames, static frontend serving. |
 | 0.9 | 2026-07-05 | DC0SK | Added §6c rig HIL execution record: rig control validated on a real Yaesu FT-991A (read/set freq 2 m+10 m, mode, S-meter, input-validation, audit); PTT + real spectrum/audio still deferred. |

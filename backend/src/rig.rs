@@ -384,6 +384,45 @@ struct PttInner {
     active: AtomicBool,
 }
 
+/// How many times an automatic unkey is attempted before giving up and leaving
+/// PTT reported as active. Transmitting unattended is the failure we are
+/// guarding against, so this retries rather than clearing state optimistically.
+const UNKEY_ATTEMPTS: u32 = 3;
+/// Delay between automatic unkey attempts.
+const UNKEY_RETRY_DELAY: Duration = Duration::from_secs(1);
+
+impl PttInner {
+    /// Drive the rig to unkey, retrying on failure, and clear `active` **only**
+    /// once the rig has confirmed. If every attempt fails, `active` stays set:
+    /// the server must not report a possibly-keyed transmitter as safe.
+    async fn unkey_confirmed(&self, generation: u64) {
+        for attempt in 1..=UNKEY_ATTEMPTS {
+            // A newer activation supersedes this unkey, and another path may
+            // have already unkeyed successfully.
+            if self.generation.load(Ordering::SeqCst) != generation
+                || !self.active.load(Ordering::SeqCst)
+            {
+                return;
+            }
+            match self.adapter.set_ptt(false).await {
+                Ok(()) => {
+                    self.active.store(false, Ordering::SeqCst);
+                    return;
+                }
+                Err(err) => {
+                    tracing::error!(error = %err, attempt, "PTT unkey failed");
+                    if attempt < UNKEY_ATTEMPTS {
+                        tokio::time::sleep(UNKEY_RETRY_DELAY).await;
+                    }
+                }
+            }
+        }
+        tracing::error!(
+            "PTT unkey exhausted retries; the transmitter may still be keyed — intervene at the rig"
+        );
+    }
+}
+
 impl PttGuard {
     /// Create a guard over `adapter` with the given safety `timeout`.
     #[must_use]
@@ -419,10 +458,10 @@ impl PttGuard {
             tokio::time::sleep(inner.timeout).await;
             // Only unkey if this activation is still current and still active.
             if inner.generation.load(Ordering::SeqCst) == generation
-                && inner.active.swap(false, Ordering::SeqCst)
+                && inner.active.load(Ordering::SeqCst)
             {
                 tracing::warn!("PTT safety timeout elapsed; auto-unkeying");
-                let _ = inner.adapter.set_ptt(false).await;
+                inner.unkey_confirmed(generation).await;
             }
         });
         Ok(())
@@ -430,12 +469,33 @@ impl PttGuard {
 
     /// Deactivate PTT and cancel the safety timer.
     ///
+    /// The rig must **confirm** the unkey before the guard clears its state. If
+    /// the command fails, the error is returned, [`is_active`](Self::is_active)
+    /// keeps reporting `true`, and the armed safety timer is deliberately left
+    /// in place so it still retries — the alternative is a server that believes
+    /// a transmitter it never actually released is safe (NFR-SEC-07).
+    ///
     /// # Errors
     /// Returns [`RigError`] if the rig command fails.
     pub async fn deactivate(&self) -> Result<(), RigError> {
+        self.inner.adapter.set_ptt(false).await?;
         self.inner.generation.fetch_add(1, Ordering::SeqCst);
         self.inner.active.store(false, Ordering::SeqCst);
-        self.inner.adapter.set_ptt(false).await
+        Ok(())
+    }
+
+    /// Unkey the rig on process shutdown if PTT is still active.
+    ///
+    /// The safety timer runs on the Tokio runtime, so a SIGTERM mid-transmission
+    /// drops it and nothing is left to release the transmitter. Shutdown must
+    /// therefore unkey explicitly, before the runtime goes away.
+    pub async fn shutdown(&self) {
+        if !self.inner.active.load(Ordering::SeqCst) {
+            return;
+        }
+        tracing::warn!("shutting down with PTT active; unkeying");
+        let generation = self.inner.generation.load(Ordering::SeqCst);
+        self.inner.unkey_confirmed(generation).await;
     }
 }
 

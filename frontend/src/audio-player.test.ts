@@ -18,6 +18,7 @@ function makeBuffer(seq: number, samples: number[]): ArrayBuffer {
 
 test("parseAudioFrame reads the sequence header and PCM samples", () => {
   const frame = parseAudioFrame(makeBuffer(42, [0, 100, -100, 32000]));
+  assert.ok(frame !== null);
   assert.equal(frame.seq, 42);
   assert.deepEqual([...frame.pcm], [0, 100, -100, 32000]);
 });
@@ -25,6 +26,7 @@ test("parseAudioFrame reads the sequence header and PCM samples", () => {
 test("encode/parse round-trips a frame", () => {
   const pcm = Int16Array.of(0, 1, -1, 32000, -32000);
   const parsed = parseAudioFrame(encodeAudioFrame(9, pcm));
+  assert.ok(parsed !== null);
   assert.equal(parsed.seq, 9);
   assert.deepEqual([...parsed.pcm], [...pcm]);
 });
@@ -79,4 +81,17 @@ test("jitter buffer drops late frames", () => {
   assert.deepEqual(jb.pop(), { kind: "data", pcm: Int16Array.of(5) });
   jb.push(frame(4)); // already played past
   assert.equal(jb.pop(), null);
+});
+
+test("parseAudioFrame rejects frames that are not valid PCM", () => {
+  // An odd payload length is not PCM — `new Int16Array` would throw. Opus
+  // payloads are arbitrary-length, so this is what a mis-negotiated codec looks
+  // like on the wire.
+  assert.equal(parseAudioFrame(new ArrayBuffer(11)), null);
+  // Shorter than the 8-byte sequence header.
+  assert.equal(parseAudioFrame(new ArrayBuffer(4)), null);
+  // Header only, no samples, is valid and yields an empty frame.
+  const empty = parseAudioFrame(new ArrayBuffer(8));
+  assert.ok(empty !== null);
+  assert.equal(empty.pcm.length, 0);
 });

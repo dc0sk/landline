@@ -1,8 +1,8 @@
 ---
 title: Operator User Manual
 status: Draft
-version: "1.0"
-updated: 2026-07-08
+version: "1.1"
+updated: 2026-07-21
 authors:
   - Simon Keimer (DC0SK)
 ---
@@ -110,6 +110,12 @@ connection drops it reconnects automatically and resumes.
 **Listening.** Receive audio plays automatically once you're signed in — no button to press. Adjust
 your computer's or the rig's volume as usual.
 
+> **Note — Opus builds.** Browser playback currently supports uncompressed audio only. If your
+> station's server was built with Opus compression enabled, landline will tell you that audio is
+> unavailable rather than play noise; the spectrum and all other controls are unaffected. Ask your
+> administrator to run the server without the `opus` feature until browser-side Opus decoding
+> ships.
+
 **Choosing devices.** Under **Audio devices**, pick your **Input (microphone)** and
 **Output (speaker)**. If the list shows only generic names, your browser hasn't granted microphone
 permission yet — allow it when prompted so device names appear.
@@ -143,6 +149,7 @@ the service starts.
 | No frequency/mode shown | You're an Observer (control is Operator-only) | Use an Operator account for rig control |
 | No spectrum | Connection dropped | It reconnects automatically; refresh if it doesn't |
 | No receive audio | Muted, wrong output device, or non-secure page | Check volume/output device; ensure the page is `https://` |
+| "audio codec not supported" message | Server built with Opus; the browser decodes uncompressed audio only | Ask your admin to run the server without the `opus` feature (see §7) |
 | Microphone unavailable on PTT | Browser mic permission denied, or non-secure page | Allow microphone access; use `https://` |
 | Rig control returns an error | Rig temporarily unreachable | Wait a moment and retry; tell your admin if it persists |
 

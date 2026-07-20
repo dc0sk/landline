@@ -196,3 +196,77 @@ test("reports the server's audio sample rate on ready", () => {
   });
   assert.equal(reported, 44100);
 });
+
+test("refuses an audio codec it cannot decode instead of playing noise", () => {
+  // Opus payloads reinterpreted as PCM are noise. The client must decline the
+  // stream and say so, not subscribe and render whatever bytes arrive.
+  const sockets: FakeSocket[] = [];
+  let error = "";
+  const audio: unknown[] = [];
+  const client = new TelemetryClient({
+    url: "wss://x/ws",
+    token: () => "tok",
+    connect: () => {
+      const s = new FakeSocket();
+      sockets.push(s);
+      return s;
+    },
+    scheduler: noopScheduler,
+    onAudio: (f) => audio.push(f),
+    onError: (m) => {
+      error = m;
+    },
+  });
+  client.start();
+  const socket = sockets[0]!;
+  socket.onopen!();
+  socket.onmessage!({
+    data: JSON.stringify({
+      type: "ready",
+      role: "operator",
+      audio_sample_rate: 48000,
+      audio_codec: "opus",
+    }),
+  });
+
+  const subscriptions = socket.sent.map((s) => JSON.parse(s) as Record<string, unknown>);
+  assert.ok(
+    !subscriptions.some((m) => m["stream"] === "audio"),
+    "must not subscribe to a codec it cannot decode",
+  );
+  assert.match(error, /opus/);
+
+  // Even if frames arrive anyway, they must not be interpreted as PCM.
+  socket.onmessage!({ data: new ArrayBuffer(16) });
+  assert.deepEqual(audio, []);
+});
+
+test("subscribes to audio when the codec is PCM", () => {
+  // Negative control: the refusal above must be the codec check, not a broken
+  // audio subscription path.
+  const sockets: FakeSocket[] = [];
+  const client = new TelemetryClient({
+    url: "wss://x/ws",
+    token: () => "tok",
+    connect: () => {
+      const s = new FakeSocket();
+      sockets.push(s);
+      return s;
+    },
+    scheduler: noopScheduler,
+    onAudio: () => {},
+  });
+  client.start();
+  const socket = sockets[0]!;
+  socket.onopen!();
+  socket.onmessage!({
+    data: JSON.stringify({
+      type: "ready",
+      role: "operator",
+      audio_sample_rate: 48000,
+      audio_codec: "pcm",
+    }),
+  });
+  const subscriptions = socket.sent.map((s) => JSON.parse(s) as Record<string, unknown>);
+  assert.ok(subscriptions.some((m) => m["stream"] === "audio"));
+});

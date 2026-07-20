@@ -137,6 +137,9 @@ pub trait Codec: Send + Sync {
     fn encode(&self, samples: &[i16]) -> Vec<u8>;
     /// Decode a transport payload back to 16-bit PCM samples.
     fn decode(&self, payload: &[u8]) -> Vec<i16>;
+    /// Wire name of this codec, advertised to clients so they never have to
+    /// guess how to interpret an audio frame's bytes.
+    fn name(&self) -> &'static str;
 }
 
 /// Sink for transmit audio decoded from the client (FR-AUD-02). The Pi-side rig
@@ -170,6 +173,10 @@ pub fn split_frame(frame: &[u8]) -> Option<(u64, &[u8])> {
 pub struct PcmCodec;
 
 impl Codec for PcmCodec {
+    fn name(&self) -> &'static str {
+        "pcm"
+    }
+
     fn encode(&self, samples: &[i16]) -> Vec<u8> {
         let mut out = Vec::with_capacity(samples.len() * 2);
         for sample in samples {
@@ -217,6 +224,10 @@ impl OpusCodec {
 
 #[cfg(feature = "opus")]
 impl Codec for OpusCodec {
+    fn name(&self) -> &'static str {
+        "opus"
+    }
+
     fn encode(&self, samples: &[i16]) -> Vec<u8> {
         let mut out = vec![0u8; 4000];
         let mut encoder = self
@@ -250,6 +261,21 @@ impl Codec for OpusCodec {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn pcm_codec_names_itself_on_the_wire() {
+        // The client keys its decode path off this string, so it is API.
+        use super::{Codec, PcmCodec};
+        assert_eq!(PcmCodec.name(), "pcm");
+    }
+
+    #[cfg(feature = "opus")]
+    #[test]
+    fn opus_codec_names_itself_on_the_wire() {
+        use super::{Codec, OpusCodec};
+        let codec = OpusCodec::new(48_000, 16_000).expect("opus init");
+        assert_eq!(codec.name(), "opus");
+    }
+
     use super::{AudioFrame, Codec, JitterBuffer, PcmCodec, Playout};
 
     fn frame(seq: u64) -> AudioFrame {

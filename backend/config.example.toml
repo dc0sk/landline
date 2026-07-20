@@ -89,6 +89,10 @@ update_rate_hz = 5
 center_hz = 0
 
 [audio]
+# NOTE: the browser client currently decodes uncompressed PCM only. A server
+# built with `--features opus` advertises the opus codec, and the web UI will
+# refuse the audio stream (with a message) rather than play noise. Run without
+# the `opus` feature until browser-side Opus decoding lands (BL-072).
 # Audio pipeline (ARC-05). sample_rate/frame define framing; bitrate is the Opus
 # target (FR-AUD-05); jitter_* size the reorder/loss-concealment buffer (FR-AUD-06).
 sample_rate_hz = 48000

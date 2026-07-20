@@ -170,6 +170,15 @@ async fn authenticated_client_receives_spectrum_frames() {
     assert_eq!(ready["role"], "operator");
     // The client must be told the audio rate rather than assuming one.
     assert_eq!(ready["audio_sample_rate"], 48_000);
+    // The client must be *told* the codec rather than guess it. Which codec is
+    // configured depends on build features and on whether libopus initialised,
+    // so assert the contract (a known codec is always named), not a value that
+    // depends on the runtime environment. `Codec::name` is unit-tested per impl.
+    let codec = ready["audio_codec"].as_str().expect("codec is named");
+    assert!(
+        codec == "pcm" || codec == "opus",
+        "unexpected codec on the wire: {codec}"
+    );
 
     send_json(&mut ws, &json!({"type": "subscribe", "stream": "spectrum"})).await;
 

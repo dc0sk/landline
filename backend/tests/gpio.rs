@@ -170,3 +170,45 @@ async fn observer_denied_gpio() {
         .unwrap();
     assert_eq!(set.status(), StatusCode::FORBIDDEN);
 }
+
+#[tokio::test]
+async fn denied_gpio_attempts_are_audited() {
+    // §2.4 of the test strategy defines a security-test pass as "blocked AND
+    // audited". Only the PTT endpoint recorded its denials; GPIO refused the
+    // request and left no trace, so a probe of the control surface was
+    // invisible to whoever reads the log.
+    let app = app_with_gpio(vec![
+        user("obs", Role::Observer, "pw"),
+        user("admin", Role::Admin, "adminpw"),
+    ]);
+    let obs_token = login(&app, "obs", "pw").await;
+
+    for (uri, request) in [
+        (
+            "set",
+            post("/api/gpio/17", &obs_token, &json!({"level": "high"})),
+        ),
+        ("read", get("/api/gpio/17", &obs_token)),
+        ("list", get("/api/gpio", &obs_token)),
+    ] {
+        let response = app.clone().oneshot(request).await.unwrap();
+        assert_eq!(
+            response.status(),
+            StatusCode::FORBIDDEN,
+            "{uri} must be refused for an Observer"
+        );
+    }
+
+    let admin_token = login(&app, "admin", "adminpw").await;
+    let view = app.oneshot(get("/api/audit", &admin_token)).await.unwrap();
+    let events = body_json(view).await;
+    let events = events.as_array().unwrap();
+    for action in ["gpio.set", "gpio.read", "gpio.list"] {
+        assert!(
+            events
+                .iter()
+                .any(|e| e["action"] == action && e["outcome"] == "failure"),
+            "denied {action} must be audited; log was {events:?}"
+        );
+    }
+}

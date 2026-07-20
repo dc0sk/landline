@@ -60,12 +60,17 @@ struct SmeterResponse {
     strength: i32,
 }
 
-async fn get_smeter(user: AuthUser, Extension(rig): Extension<Arc<RigAdapter>>) -> Response {
+async fn get_smeter(
+    user: AuthUser,
+    Extension(rig): Extension<Arc<RigAdapter>>,
+    Extension(audit): Extension<Arc<AuditLog>>,
+    ClientIp(ip): ClientIp,
+) -> Response {
     // FR-RIG-06: S-meter is readable by Operators and Observers alike. Continuous
     // streaming at a configured cadence rides the Phase-2 WS telemetry channel
     // (ADR-02); this is the point-read path.
-    if let Err(err) = user.require(Role::Observer) {
-        return err.into_response();
+    if let Some(err) = audit.require_role(&user, Role::Observer, ip.as_deref(), "rig.smeter") {
+        return err;
     }
     match rig.get_strength().await {
         Ok(strength) => Json(SmeterResponse { strength }).into_response(),
@@ -73,9 +78,14 @@ async fn get_smeter(user: AuthUser, Extension(rig): Extension<Arc<RigAdapter>>) 
     }
 }
 
-async fn get_frequency(user: AuthUser, Extension(rig): Extension<Arc<RigAdapter>>) -> Response {
-    if let Err(err) = user.require(Role::Operator) {
-        return err.into_response();
+async fn get_frequency(
+    user: AuthUser,
+    Extension(rig): Extension<Arc<RigAdapter>>,
+    Extension(audit): Extension<Arc<AuditLog>>,
+    ClientIp(ip): ClientIp,
+) -> Response {
+    if let Some(err) = audit.require_role(&user, Role::Operator, ip.as_deref(), "rig.get_freq") {
+        return err;
     }
     match rig.get_frequency().await {
         Ok(hz) => Json(FrequencyResponse { hz }).into_response(),
@@ -90,8 +100,8 @@ async fn set_frequency(
     ClientIp(ip): ClientIp,
     Json(req): Json<SetFrequencyRequest>,
 ) -> Response {
-    if let Err(err) = user.require(Role::Operator) {
-        return err.into_response();
+    if let Some(err) = audit.require_role(&user, Role::Operator, ip.as_deref(), "rig.set_freq") {
+        return err;
     }
     match rig.set_frequency(req.hz).await {
         Ok(()) => {
@@ -107,9 +117,14 @@ async fn set_frequency(
     }
 }
 
-async fn get_mode(user: AuthUser, Extension(rig): Extension<Arc<RigAdapter>>) -> Response {
-    if let Err(err) = user.require(Role::Operator) {
-        return err.into_response();
+async fn get_mode(
+    user: AuthUser,
+    Extension(rig): Extension<Arc<RigAdapter>>,
+    Extension(audit): Extension<Arc<AuditLog>>,
+    ClientIp(ip): ClientIp,
+) -> Response {
+    if let Some(err) = audit.require_role(&user, Role::Operator, ip.as_deref(), "rig.get_mode") {
+        return err;
     }
     match rig.get_mode().await {
         Ok(mode) => Json(ModeResponse { mode }).into_response(),
@@ -124,8 +139,8 @@ async fn set_mode(
     ClientIp(ip): ClientIp,
     Json(req): Json<SetModeRequest>,
 ) -> Response {
-    if let Err(err) = user.require(Role::Operator) {
-        return err.into_response();
+    if let Some(err) = audit.require_role(&user, Role::Operator, ip.as_deref(), "rig.set_mode") {
+        return err;
     }
     // Parse against the allowlist here so an invalid token is a clean 400
     // (NFR-SEC-08) rather than a JSON deserialisation error.
@@ -156,9 +171,8 @@ async fn set_ptt(
 ) -> Response {
     // PTT requires Operator (NFR-SEC-07); a denied attempt is itself audited
     // (TC-RIG-05).
-    if let Err(err) = user.require(Role::Operator) {
-        audit.record_denied(ip.as_deref(), &user.claims.sub, "rig.ptt");
-        return err.into_response();
+    if let Some(err) = audit.require_role(&user, Role::Operator, ip.as_deref(), "rig.ptt") {
+        return err;
     }
     let result = if req.transmit {
         ptt.activate().await

@@ -23,6 +23,7 @@ use axum::Extension;
 use serde::{Deserialize, Serialize};
 
 use crate::audio::{f32_to_pcm16, split_frame, AudioSink, Codec};
+use crate::audit::{AuditLog, ClientIp};
 use crate::auth::{Auth, Claims, Role};
 use crate::spectrum::{SampleSource, SpectrumAnalyzer};
 
@@ -109,11 +110,13 @@ pub async fn handler(
     Extension(auth): Extension<Arc<Auth>>,
     Extension(spectrum): Extension<Arc<SpectrumRuntime>>,
     Extension(audio): Extension<Arc<AudioRuntime>>,
+    Extension(audit_log): Extension<Arc<AuditLog>>,
+    ClientIp(ip): ClientIp,
 ) -> Response {
     let max = spectrum.max_frame_bytes;
     ws.max_message_size(max)
         .max_frame_size(max)
-        .on_upgrade(move |socket| session(socket, auth, spectrum, audio))
+        .on_upgrade(move |socket| session(socket, auth, spectrum, audio, audit_log, ip))
 }
 
 async fn session(
@@ -121,6 +124,8 @@ async fn session(
     auth: Arc<Auth>,
     spectrum: Arc<SpectrumRuntime>,
     audio: Arc<AudioRuntime>,
+    log: Arc<AuditLog>,
+    ip: Option<String>,
 ) {
     let Some((claims, token)) = authenticate(&mut socket, &auth, spectrum.auth_timeout).await
     else {
@@ -144,6 +149,7 @@ async fn session(
 
     let mut spectrum_on = false;
     let mut audio_on = false;
+    let mut tx = TxAuditState::default();
     let mut spectrum_seq: u64 = 0;
     let mut audio_seq: u64 = 0;
     let rate = spectrum.update_rate_hz.clamp(1.0, 10.0);
@@ -185,13 +191,7 @@ async fn session(
                         }
                     }
                     Some(Ok(Message::Binary(bytes))) => {
-                        // Transmit audio (FR-AUD-02) requires Operator; any other
-                        // role's TX frames are dropped (per-message-type ACL).
-                        if claims.role.allows(Role::Operator) {
-                            if let Some((_seq, payload)) = split_frame(&bytes) {
-                                audio.sink.accept(&audio.codec.decode(payload));
-                            }
-                        }
+                        accept_tx_audio(&bytes, &claims, &audio, &log, ip.as_deref(), &mut tx);
                     }
                     Some(Ok(Message::Close(_)) | Err(_)) | None => break,
                     Some(Ok(_)) => {} // ignore ping/pong
@@ -235,6 +235,47 @@ const AUTH_RECHECK_INTERVAL: Duration = Duration::from_secs(1);
 
 /// Authenticate the first message. Returns the claims **and the token**, which
 /// the session keeps so it can re-verify expiry and revocation as it runs.
+/// Whether this session has already audited its TX stream. TX audio is a
+/// continuous stream, so the start and the first denial are recorded once per
+/// session — one event per 20 ms frame would bury the log without adding
+/// information.
+#[derive(Default)]
+struct TxAuditState {
+    started: bool,
+    denied: bool,
+}
+
+/// Handle one inbound binary (transmit-audio) frame.
+///
+/// Transmit requires Operator (FR-AUD-02, per-message-type ACL per ADR-02); any
+/// other role's frames are dropped. Both the accepted stream and a denied
+/// attempt are audited — an attempt to key the rig is exactly the event the
+/// audit log exists for.
+fn accept_tx_audio(
+    bytes: &[u8],
+    claims: &Claims,
+    audio: &AudioRuntime,
+    log: &AuditLog,
+    ip: Option<&str>,
+    tx: &mut TxAuditState,
+) {
+    if !claims.role.allows(Role::Operator) {
+        if !tx.denied {
+            tx.denied = true;
+            log.record_denied(ip, &claims.sub, "ws.tx_audio");
+        }
+        return;
+    }
+    let Some((_seq, payload)) = split_frame(bytes) else {
+        return;
+    };
+    if !tx.started {
+        tx.started = true;
+        log.record_action(ip, &claims.sub, "ws.tx_audio", "start");
+    }
+    audio.sink.accept(&audio.codec.decode(payload));
+}
+
 async fn authenticate(
     socket: &mut WebSocket,
     auth: &Auth,

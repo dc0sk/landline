@@ -24,6 +24,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use axum::extract::{ConnectInfo, FromRequestParts};
 use axum::http::request::Parts;
+use axum::response::{IntoResponse, Response};
 use axum::routing::get;
 use axum::{Extension, Json, Router};
 use serde::{Deserialize, Serialize};
@@ -161,6 +162,34 @@ impl AuditLog {
     /// Record a denied action (RBAC rejection, FR-AUDIT companion to FR-AUTH-04).
     pub fn record_denied(&self, client_ip: Option<&str>, user: &str, action: &str) -> AuditEvent {
         self.record(client_ip, Some(user), action, "", Outcome::Failure)
+    }
+
+    /// Enforce `role` for `action`, recording an audit event when access is
+    /// denied (FR-AUDIT-01, TC-SEC-15).
+    ///
+    /// The role check and the denial record are deliberately one call rather
+    /// than two: every handler that only remembered the first half produced a
+    /// correctly-refused request that left no trace, which is precisely the
+    /// gap this closes. A new handler cannot skip the audit without also
+    /// skipping the authorisation.
+    ///
+    /// Returns `None` when the user may proceed, or `Some(response)` — the
+    /// refusal to return to the client — when they may not.
+    #[must_use]
+    pub fn require_role(
+        &self,
+        user: &AuthUser,
+        role: Role,
+        client_ip: Option<&str>,
+        action: &str,
+    ) -> Option<Response> {
+        match user.require(role) {
+            Ok(()) => None,
+            Err(err) => {
+                self.record_denied(client_ip, &user.claims.sub, action);
+                Some(err.into_response())
+            }
+        }
     }
 
     /// A snapshot of the recent-events window (newest last).

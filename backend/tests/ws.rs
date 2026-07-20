@@ -37,15 +37,28 @@ async fn start_with_tokens() -> (SocketAddr, (String, String)) {
 /// As [`start_with_tokens`], with a caller-chosen access-token TTL so a test can
 /// watch a live session outlive its own credential.
 async fn start_with_ttl(access_ttl_secs: u64) -> (SocketAddr, (String, String)) {
+    start_with_users(
+        access_ttl_secs,
+        vec![UserConfig {
+            name: "op".to_owned(),
+            role: Role::Operator,
+            password_hash: hash_password("pw").unwrap(),
+        }],
+    )
+    .await
+}
+
+/// As [`start_with_ttl`], with a caller-chosen user list so a test can sign in
+/// as a role other than Operator, or read the audit log as an Admin.
+async fn start_with_users(
+    access_ttl_secs: u64,
+    users: Vec<UserConfig>,
+) -> (SocketAddr, (String, String)) {
     let config = Config {
         auth: AuthConfig {
             access_ttl_secs,
             refresh_ttl_secs: 3600,
-            users: vec![UserConfig {
-                name: "op".to_owned(),
-                role: Role::Operator,
-                password_hash: hash_password("pw").unwrap(),
-            }],
+            users,
         },
         security: SecurityConfig {
             rate_limit_per_sec: 1000,
@@ -59,7 +72,7 @@ async fn start_with_ttl(access_ttl_secs: u64) -> (SocketAddr, (String, String)) 
         ..Config::default()
     };
     let app = app(&config);
-    let tokens = login(&app).await;
+    let tokens = login(&app, "op", "pw").await;
 
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
@@ -74,13 +87,13 @@ async fn start_with_ttl(access_ttl_secs: u64) -> (SocketAddr, (String, String)) 
     (addr, tokens)
 }
 
-async fn login(app: &Router) -> (String, String) {
+async fn login(app: &Router, name: &str, password: &str) -> (String, String) {
     let mut request = Request::builder()
         .method("POST")
         .uri("/auth/login")
         .header("content-type", "application/json")
         .body(Body::from(
-            serde_json::to_vec(&json!({"name": "op", "password": "pw"})).unwrap(),
+            serde_json::to_vec(&json!({"name": name, "password": password})).unwrap(),
         ))
         .unwrap();
     request
@@ -288,5 +301,135 @@ async fn expired_token_closes_an_already_open_websocket() {
     assert!(
         closed.unwrap_or(false),
         "an open WebSocket must stop streaming once its token expires"
+    );
+}
+
+/// Log in over real HTTP against the running server (the in-process `login`
+/// helper needs the `Router`, which `start_*` has already consumed).
+async fn login_at(addr: SocketAddr, name: &str, password: &str) -> (String, String) {
+    let body = json!({ "name": name, "password": password }).to_string();
+    let mut stream = tokio::net::TcpStream::connect(addr).await.unwrap();
+    let request = format!(
+        "POST /auth/login HTTP/1.1\r\nHost: {addr}\r\ncontent-type: application/json\r\n\
+         content-length: {}\r\nconnection: close\r\n\r\n{body}",
+        body.len()
+    );
+    tokio::io::AsyncWriteExt::write_all(&mut stream, request.as_bytes())
+        .await
+        .unwrap();
+    let mut response = Vec::new();
+    tokio::io::AsyncReadExt::read_to_end(&mut stream, &mut response)
+        .await
+        .unwrap();
+    let text = String::from_utf8_lossy(&response);
+    let body = text.split("\r\n\r\n").nth(1).unwrap_or("{}");
+    let value: Value = serde_json::from_str(body.trim()).expect("login response");
+    (
+        value["access_token"].as_str().unwrap().to_owned(),
+        value["refresh_token"].as_str().unwrap().to_owned(),
+    )
+}
+
+/// Read the audit log over HTTP as an Admin and return the events.
+async fn audit_events(addr: SocketAddr, admin_token: &str) -> Vec<Value> {
+    let mut stream = tokio::net::TcpStream::connect(addr).await.unwrap();
+    let request = format!(
+        "GET /api/audit HTTP/1.1\r\nHost: {addr}\r\nauthorization: Bearer {admin_token}\r\n\
+         connection: close\r\n\r\n"
+    );
+    tokio::io::AsyncWriteExt::write_all(&mut stream, request.as_bytes())
+        .await
+        .unwrap();
+    let mut response = Vec::new();
+    tokio::io::AsyncReadExt::read_to_end(&mut stream, &mut response)
+        .await
+        .unwrap();
+    let text = String::from_utf8_lossy(&response);
+    let body = text.split("\r\n\r\n").nth(1).unwrap_or("[]");
+    serde_json::from_str(body.trim()).unwrap_or_default()
+}
+
+fn users_for_tx_test() -> Vec<UserConfig> {
+    vec![
+        UserConfig {
+            name: "op".to_owned(),
+            role: Role::Operator,
+            password_hash: hash_password("pw").unwrap(),
+        },
+        UserConfig {
+            name: "obs".to_owned(),
+            role: Role::Observer,
+            password_hash: hash_password("pw").unwrap(),
+        },
+        UserConfig {
+            name: "admin".to_owned(),
+            role: Role::Admin,
+            password_hash: hash_password("adminpw").unwrap(),
+        },
+    ]
+}
+
+/// An audio TX frame: 8-byte LE sequence header + one PCM sample.
+fn tx_frame(seq: u64) -> Vec<u8> {
+    let mut frame = seq.to_le_bytes().to_vec();
+    frame.extend_from_slice(&0i16.to_le_bytes());
+    frame
+}
+
+#[tokio::test]
+async fn operator_tx_audio_is_audited() {
+    // FR-AUDIT-01: nothing arriving over the WebSocket was audited at all, so
+    // audio fed into the rig's transmit path left no trace — while the HTTP
+    // twin (POST /api/rig/ptt) audited both success and denial.
+    let (addr, _) = start_with_users(900, users_for_tx_test()).await;
+    let (op_token, _) = login_at(addr, "op", "pw").await;
+    let (mut ws, _) = connect_async(format!("ws://{addr}/ws")).await.unwrap();
+    send_json(&mut ws, &json!({"type": "auth", "token": op_token})).await;
+    let ready = as_json(ws.next().await.unwrap().unwrap()).unwrap();
+    assert_eq!(ready["type"], "ready");
+
+    ws.send(WsMessage::Binary(tx_frame(1))).await.unwrap();
+    // Give the server a moment to process the frame.
+    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+
+    let (admin_token, _) = login_at(addr, "admin", "adminpw").await;
+    let events = audit_events(addr, &admin_token).await;
+    assert!(
+        events
+            .iter()
+            .any(|e| e["action"] == "ws.tx_audio" && e["outcome"] == "success"),
+        "operator TX audio must be audited; log was {events:?}"
+    );
+}
+
+#[tokio::test]
+async fn observer_tx_audio_is_denied_and_audited() {
+    // The per-message-type ACL (ADR-02) drops a non-Operator's TX frames. That
+    // path had no test at any tier: deleting the role guard left the suite
+    // green. A denied attempt to key the rig is exactly what the audit log is
+    // for, so assert both the drop and the record.
+    let (addr, _) = start_with_users(900, users_for_tx_test()).await;
+    let (obs_token, _) = login_at(addr, "obs", "pw").await;
+    let (mut ws, _) = connect_async(format!("ws://{addr}/ws")).await.unwrap();
+    send_json(&mut ws, &json!({"type": "auth", "token": obs_token})).await;
+    let ready = as_json(ws.next().await.unwrap().unwrap()).unwrap();
+    assert_eq!(ready["role"], "observer");
+
+    ws.send(WsMessage::Binary(tx_frame(1))).await.unwrap();
+    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+
+    let (admin_token, _) = login_at(addr, "admin", "adminpw").await;
+    let events = audit_events(addr, &admin_token).await;
+    assert!(
+        events
+            .iter()
+            .any(|e| e["action"] == "ws.tx_audio" && e["outcome"] == "failure"),
+        "an Observer's TX attempt must be audited as denied; log was {events:?}"
+    );
+    assert!(
+        !events
+            .iter()
+            .any(|e| e["action"] == "ws.tx_audio" && e["outcome"] == "success"),
+        "an Observer's TX frame must never be accepted"
     );
 }

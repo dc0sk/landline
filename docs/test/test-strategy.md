@@ -1,7 +1,7 @@
 ---
 title: "Test Strategy & Traceability"
 status: Draft
-version: "0.15"
+version: "0.16"
 updated: 2026-07-20
 authors:
   - Simon Keimer (DC0SK)
@@ -87,7 +87,7 @@ A test passes when:
 | `TC-RIG-02` | `FR-RIG-02` | Set valid frequency; verify rig receives command; verify out-of-range is rejected | Integration | Not written |
 | `TC-RIG-03` | `FR-RIG-03`, `FR-RIG-04` | Read and set operating mode; verify unsupported mode is rejected | Integration | Not written |
 | `TC-RIG-04` | `FR-RIG-05` | Activate PTT as Operator; verify rig state; deactivate | Integration | Not written |
-| `TC-RIG-05` | `FR-RIG-05`, `NFR-SEC-07` | PTT activation attempt by Observer role; verify rejection and audit log | Integration | Not written |
+| `TC-RIG-05` | `FR-RIG-05`, `NFR-SEC-07` | PTT activation attempt by Observer role; verify rejection and audit log | Integration | Pass (integration) |
 | `TC-RIG-06` | `FR-RIG-06` | S-meter value streams to client at configured interval | Integration | Not written |
 | `TC-RIG-07` | `FR-RIG-08` | rigctld TCP adapter connects, sends command, parses response | Unit | Not written |
 | `TC-RIG-08` | `FR-RIG-09` | Send frequency below 0 Hz; verify server rejects with 400-equivalent error | Integration | Not written |
@@ -347,6 +347,7 @@ decode, BL-072), and the browser matrix.
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.16 | 2026-07-21 | DC0SK | Every role-gated endpoint now audits its denials through one seam, and WebSocket TX audio is audited (accepted and denied). Closes the "blocked AND audited" gap in §2.4 for GPIO/frequency/mode and gives the WS TX path its first test. |
 | 0.15 | 2026-07-20 | DC0SK | Audio sample rate is now requested from the device and advertised to clients rather than assumed at both ends (audit finding). Rate-matching unit-tested; the device-negotiation half still needs HIL on the FT-991A codec. |
 | 0.14 | 2026-07-20 | DC0SK | GPIO hardware failures now propagate instead of being swallowed (audit finding): fault-injection tests cover the error path the real gpiod backend cannot exercise in CI. |
 | 0.13 | 2026-07-20 | DC0SK | TC-AUTH-02/05 extended to the WebSocket path: an open socket must stop streaming on token expiry or logout (audit finding — auth ran only at connect). |

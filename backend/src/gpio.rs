@@ -329,9 +329,11 @@ pub struct PinInfo {
 async fn list_pins(
     user: AuthUser,
     Extension(gpio): Extension<std::sync::Arc<GpioController>>,
+    Extension(audit): Extension<std::sync::Arc<AuditLog>>,
+    ClientIp(ip): ClientIp,
 ) -> Response {
-    if let Err(err) = user.require(Role::Operator) {
-        return err.into_response();
+    if let Some(err) = audit.require_role(&user, Role::Operator, ip.as_deref(), "gpio.list") {
+        return err;
     }
     Json(gpio.list()).into_response()
 }
@@ -344,10 +346,12 @@ struct SetPinRequest {
 async fn read_pin(
     user: AuthUser,
     Extension(gpio): Extension<std::sync::Arc<GpioController>>,
+    Extension(audit): Extension<std::sync::Arc<AuditLog>>,
+    ClientIp(ip): ClientIp,
     Path(pin): Path<u8>,
 ) -> Response {
-    if let Err(err) = user.require(Role::Operator) {
-        return err.into_response();
+    if let Some(err) = audit.require_role(&user, Role::Operator, ip.as_deref(), "gpio.read") {
+        return err;
     }
     match gpio.read(pin) {
         Ok(level) => Json(PinResponse { pin, level }).into_response(),
@@ -363,8 +367,8 @@ async fn set_pin(
     Path(pin): Path<u8>,
     Json(req): Json<SetPinRequest>,
 ) -> Response {
-    if let Err(err) = user.require(Role::Operator) {
-        return err.into_response();
+    if let Some(err) = audit.require_role(&user, Role::Operator, ip.as_deref(), "gpio.set") {
+        return err;
     }
     match gpio.set(pin, req.level) {
         Ok(()) => {

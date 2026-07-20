@@ -1,7 +1,7 @@
 ---
 title: "Test Strategy & Traceability"
 status: Draft
-version: "0.12"
+version: "0.13"
 updated: 2026-07-20
 authors:
   - Simon Keimer (DC0SK)
@@ -119,10 +119,10 @@ A test passes when:
 | ID | Requirement(s) | Description | Level | Status |
 |---|---|---|---|---|
 | `TC-AUTH-01` | `FR-AUTH-01` | Unauthenticated WebSocket connection attempt; verify rejection and no data leak | Security | Not written |
-| `TC-AUTH-02` | `FR-AUTH-02` | Issue token; wait for expiry; verify subsequent requests are rejected | Integration | Not written |
+| `TC-AUTH-02` | `FR-AUTH-02` | Issue token; wait for expiry; verify subsequent requests are rejected **and that an already-open WebSocket stops streaming** | Integration | Pass (integration) |
 | `TC-AUTH-03` | `FR-AUTH-03` | Token refresh flow; verify new token issued and old token invalidated | Integration | Not written |
 | `TC-AUTH-04` | `FR-AUTH-04`, `NFR-SEC-12` | Observer attempts rig command; verify 403-equivalent rejection; no credential in logs | Security | Not written |
-| `TC-AUTH-05` | `FR-AUTH-05` | Explicit logout; verify session invalidated; re-use of old token rejected | Integration | Not written |
+| `TC-AUTH-05` | `FR-AUTH-05` | Explicit logout; verify session invalidated; re-use of old token rejected; **an already-open WebSocket is closed** | Integration | Pass (integration) |
 
 ### 4.5 AUDIT — Audit and Logging
 
@@ -347,6 +347,7 @@ decode, BL-072), and the browser matrix.
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.13 | 2026-07-20 | DC0SK | TC-AUTH-02/05 extended to the WebSocket path: an open socket must stop streaming on token expiry or logout (audit finding — auth ran only at connect). |
 | 0.12 | 2026-07-20 | DC0SK | TC-SEC-07 strengthened: asserts the unkey command reaching the rig (mock rigctld) rather than an internal flag; records the PTT unkey-confirmation and shutdown-unkey defects found by the loose-ends audit. |
 | 0.11 | 2026-07-08 | DC0SK | §6c: GpiodBackend GPIO validated on real Pi hardware — kernel-debugfs-verified safe state + drive HIGH/LOW on pin 17, allowlist/direction enforcement (TC-GPIO-01/NFR-SEC-16). |
 | 0.10 | 2026-07-05 | DC0SK | §6c: CpalCapture/CpalSink audio-device adapter validated on the FT-991A USB codec — live spectrum from real RF, real audio-capture frames, static frontend serving. |

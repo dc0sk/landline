@@ -22,11 +22,24 @@ use tokio_tungstenite::tungstenite::Message as WsMessage;
 use tower::ServiceExt;
 
 /// Build the app, obtain an operator token via a REST login, then serve the app
-/// on an ephemeral port. Returns the address and the token.
+/// on an ephemeral port. Returns the address and the access token.
 async fn start() -> (SocketAddr, String) {
+    let (addr, tokens) = start_with_tokens().await;
+    (addr, tokens.0)
+}
+
+/// As [`start`], but also returns the refresh token, which `/auth/logout`
+/// requires. Returns `(addr, (access_token, refresh_token))`.
+async fn start_with_tokens() -> (SocketAddr, (String, String)) {
+    start_with_ttl(900).await
+}
+
+/// As [`start_with_tokens`], with a caller-chosen access-token TTL so a test can
+/// watch a live session outlive its own credential.
+async fn start_with_ttl(access_ttl_secs: u64) -> (SocketAddr, (String, String)) {
     let config = Config {
         auth: AuthConfig {
-            access_ttl_secs: 900,
+            access_ttl_secs,
             refresh_ttl_secs: 3600,
             users: vec![UserConfig {
                 name: "op".to_owned(),
@@ -46,7 +59,7 @@ async fn start() -> (SocketAddr, String) {
         ..Config::default()
     };
     let app = app(&config);
-    let token = login(&app).await;
+    let tokens = login(&app).await;
 
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
@@ -58,10 +71,10 @@ async fn start() -> (SocketAddr, String) {
         .await
         .unwrap();
     });
-    (addr, token)
+    (addr, tokens)
 }
 
-async fn login(app: &Router) -> String {
+async fn login(app: &Router) -> (String, String) {
     let mut request = Request::builder()
         .method("POST")
         .uri("/auth/login")
@@ -78,7 +91,34 @@ async fn login(app: &Router) -> String {
         .await
         .unwrap();
     let value: Value = serde_json::from_slice(&bytes).unwrap();
-    value["access_token"].as_str().unwrap().to_owned()
+    (
+        value["access_token"].as_str().unwrap().to_owned(),
+        value["refresh_token"].as_str().unwrap().to_owned(),
+    )
+}
+
+/// POST /auth/logout over real HTTP against the running server.
+async fn logout(addr: SocketAddr, access_token: &str, refresh_token: &str) {
+    let body = json!({ "refresh_token": refresh_token }).to_string();
+    let mut stream = tokio::net::TcpStream::connect(addr).await.unwrap();
+    let request = format!(
+        "POST /auth/logout HTTP/1.1\r\nHost: {addr}\r\nauthorization: Bearer {access_token}\r\n\
+         content-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{body}",
+        body.len()
+    );
+    tokio::io::AsyncWriteExt::write_all(&mut stream, request.as_bytes())
+        .await
+        .unwrap();
+    let mut response = Vec::new();
+    tokio::io::AsyncReadExt::read_to_end(&mut stream, &mut response)
+        .await
+        .unwrap();
+    let response = String::from_utf8_lossy(&response);
+    assert!(
+        response.starts_with("HTTP/1.1 2"),
+        "logout should succeed, got: {}",
+        response.lines().next().unwrap_or_default()
+    );
 }
 
 fn as_json(message: WsMessage) -> Option<Value> {
@@ -166,4 +206,76 @@ async fn authenticated_client_receives_audio_frames() {
     assert!(payload.len() > 8, "frame carries a header + payload");
     let seq = u64::from_le_bytes(payload[0..8].try_into().unwrap());
     assert!(seq >= 1);
+}
+
+#[tokio::test]
+async fn logout_closes_an_already_open_websocket() {
+    // FR-AUTH-05 / TC-AUTH-05: session invalidation must reach sockets that are
+    // *already open*. Authenticating once at connect and never re-checking would
+    // let a logged-out credential keep streaming for the life of the socket, so
+    // this asserts on the live stream stopping, not on the HTTP layer.
+    let (addr, (access, refresh)) = start_with_tokens().await;
+    let (mut ws, _) = connect_async(format!("ws://{addr}/ws")).await.unwrap();
+
+    send_json(&mut ws, &json!({"type": "auth", "token": access})).await;
+    let ready = as_json(ws.next().await.unwrap().unwrap()).unwrap();
+    assert_eq!(ready["type"], "ready");
+    send_json(&mut ws, &json!({"type": "subscribe", "stream": "spectrum"})).await;
+
+    // Confirm the stream is live before revoking, so a later silence is
+    // attributable to the logout rather than to a stream that never started.
+    let first = loop {
+        if let Some(value) = as_json(ws.next().await.unwrap().unwrap()) {
+            if value["type"] == "spectrum" {
+                break value;
+            }
+        }
+    };
+    assert!(first["seq"].as_u64().unwrap() >= 1);
+
+    logout(addr, &access, &refresh).await;
+
+    // The server must drop the socket promptly. Bounded wait so a hang fails
+    // the test rather than blocking the suite.
+    let closed = tokio::time::timeout(std::time::Duration::from_secs(10), async {
+        while let Some(Ok(message)) = ws.next().await {
+            if matches!(message, WsMessage::Close(_)) {
+                return true;
+            }
+        }
+        true // stream ended
+    })
+    .await;
+    assert!(
+        closed.unwrap_or(false),
+        "an open WebSocket must stop streaming once its token is revoked"
+    );
+}
+
+#[tokio::test]
+async fn expired_token_closes_an_already_open_websocket() {
+    // FR-AUTH-02 / TC-AUTH-02: token expiry must also reach an open socket. The
+    // revocation test above and this one exercise different branches of
+    // `Auth::verify`, so neither alone proves the session re-checks its token.
+    let (addr, (access, _refresh)) = start_with_ttl(1).await;
+    let (mut ws, _) = connect_async(format!("ws://{addr}/ws")).await.unwrap();
+
+    send_json(&mut ws, &json!({"type": "auth", "token": access})).await;
+    let ready = as_json(ws.next().await.unwrap().unwrap()).unwrap();
+    assert_eq!(ready["type"], "ready");
+    send_json(&mut ws, &json!({"type": "subscribe", "stream": "spectrum"})).await;
+
+    let closed = tokio::time::timeout(std::time::Duration::from_secs(10), async {
+        while let Some(Ok(message)) = ws.next().await {
+            if matches!(message, WsMessage::Close(_)) {
+                return true;
+            }
+        }
+        true
+    })
+    .await;
+    assert!(
+        closed.unwrap_or(false),
+        "an open WebSocket must stop streaming once its token expires"
+    );
 }

@@ -87,6 +87,8 @@ pub fn app_with_ptt(config: &Config) -> (Router, Arc<PttGuard>) {
         center_hz: config.spectrum.center_hz,
         max_frame_bytes: config.security.max_body_bytes,
         auth_timeout: Duration::from_secs(5),
+        messages_per_sec: config.security.ws_messages_per_sec,
+        max_sessions: Arc::new(tokio::sync::Semaphore::new(config.security.max_ws_sessions)),
     });
     let frame_samples =
         (config.audio.sample_rate_hz as usize * config.audio.frame_ms as usize) / 1000;

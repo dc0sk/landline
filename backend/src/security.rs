@@ -30,14 +30,47 @@ use tower_http::cors::CorsLayer;
 /// Burst capacity equals the per-second rate, refilled continuously. Keys are
 /// opaque (peer IP in the middleware); each key has an independent bucket.
 pub struct RateLimiter {
-    capacity: f64,
-    refill_per_sec: f64,
-    buckets: Mutex<HashMap<String, Bucket>>,
+    rate_per_sec: u32,
+    buckets: Mutex<HashMap<String, TokenBucket>>,
 }
 
-struct Bucket {
+/// A single token bucket. Shared by the per-IP HTTP limiter and the per-session
+/// WebSocket message budget so both enforce the same arithmetic — a second
+/// hand-rolled implementation is how two limiters drift apart.
+pub struct TokenBucket {
+    capacity: f64,
+    refill_per_sec: f64,
     tokens: f64,
     last: Instant,
+}
+
+impl TokenBucket {
+    /// A bucket allowing `rate_per_sec` events per second, with a burst of the
+    /// same size, full at `now`.
+    #[must_use]
+    pub fn new(rate_per_sec: u32, now: Instant) -> Self {
+        let rate = f64::from(rate_per_sec);
+        Self {
+            capacity: rate,
+            refill_per_sec: rate,
+            tokens: rate,
+            last: now,
+        }
+    }
+
+    /// Take one token if available, refilling for elapsed time first. Returns
+    /// `false` when the caller is over budget.
+    pub fn try_take(&mut self, now: Instant) -> bool {
+        let elapsed = now.saturating_duration_since(self.last).as_secs_f64();
+        self.tokens = (self.tokens + elapsed * self.refill_per_sec).min(self.capacity);
+        self.last = now;
+        if self.tokens >= 1.0 {
+            self.tokens -= 1.0;
+            true
+        } else {
+            false
+        }
+    }
 }
 
 impl RateLimiter {
@@ -45,10 +78,8 @@ impl RateLimiter {
     /// with a burst of the same size.
     #[must_use]
     pub fn new(rate_per_sec: u32) -> Self {
-        let rate = f64::from(rate_per_sec);
         Self {
-            capacity: rate,
-            refill_per_sec: rate,
+            rate_per_sec,
             buckets: Mutex::new(HashMap::new()),
         }
     }
@@ -59,19 +90,10 @@ impl RateLimiter {
     #[must_use]
     pub fn check(&self, key: &str, now: Instant) -> bool {
         let mut buckets = self.buckets.lock().unwrap_or_else(PoisonError::into_inner);
-        let bucket = buckets.entry(key.to_owned()).or_insert(Bucket {
-            tokens: self.capacity,
-            last: now,
-        });
-        let elapsed = now.saturating_duration_since(bucket.last).as_secs_f64();
-        bucket.tokens = (bucket.tokens + elapsed * self.refill_per_sec).min(self.capacity);
-        bucket.last = now;
-        if bucket.tokens >= 1.0 {
-            bucket.tokens -= 1.0;
-            true
-        } else {
-            false
-        }
+        let bucket = buckets
+            .entry(key.to_owned())
+            .or_insert_with(|| TokenBucket::new(self.rate_per_sec, now));
+        bucket.try_take(now)
     }
 }
 

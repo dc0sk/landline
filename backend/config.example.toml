@@ -33,6 +33,11 @@ refresh_ttl_secs = 86400  # 24 hours
 
 [security]
 # Per-client rate limit on control endpoints, commands/second (NFR-SEC-04).
+# ws_messages_per_sec: inbound WebSocket messages/second per session (default
+# 200). Sized above legitimate transmit audio, which is one frame every
+# audio.frame_ms (50/s at the default 20 ms) — do not set it below that.
+# max_ws_sessions: concurrent WebSocket sessions (default 8). Each runs an FFT
+# and an encode per tick, so this bounds CPU as well as memory.
 rate_limit_per_sec = 10
 # Maximum accepted request body size in bytes (NFR-SEC-05).
 max_body_bytes = 65536

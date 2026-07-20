@@ -15,16 +15,19 @@
 //!   WS frame cannot mutate rig state.
 
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
 use axum::response::Response;
 use axum::Extension;
 use serde::{Deserialize, Serialize};
 
+use tokio::sync::Semaphore;
+
 use crate::audio::{f32_to_pcm16, split_frame, AudioSink, Codec};
 use crate::audit::{AuditLog, ClientIp};
 use crate::auth::{Auth, Claims, Role};
+use crate::security::TokenBucket;
 use crate::spectrum::{SampleSource, SpectrumAnalyzer};
 
 /// Shared runtime for the WS audio stream (ARC-05), built from config. Audio is
@@ -63,6 +66,10 @@ pub struct SpectrumRuntime {
     pub max_frame_bytes: usize,
     /// How long to wait for the client's `auth` handshake frame.
     pub auth_timeout: Duration,
+    /// Per-session inbound message budget, messages/second (NFR-SEC-04).
+    pub messages_per_sec: u32,
+    /// Cap on concurrent sessions (NFR-SEC-04).
+    pub max_sessions: Arc<Semaphore>,
 }
 
 #[derive(Deserialize)]
@@ -127,6 +134,12 @@ async fn session(
     log: Arc<AuditLog>,
     ip: Option<String>,
 ) {
+    // Bound concurrent sessions before doing any per-session work. Each session
+    // runs an FFT and an encode per tick, so this caps CPU as well as memory.
+    let Ok(_session_permit) = Arc::clone(&spectrum.max_sessions).try_acquire_owned() else {
+        reject(&mut socket, "too many sessions").await;
+        return;
+    };
     let Some((claims, token)) = authenticate(&mut socket, &auth, spectrum.auth_timeout).await
     else {
         return;
@@ -150,6 +163,10 @@ async fn session(
     let mut spectrum_on = false;
     let mut audio_on = false;
     let mut tx = TxAuditState::default();
+    // The HTTP rate limiter runs once, on the upgrade. Without a per-session
+    // budget an authenticated client could flood messages for the life of the
+    // socket at no cost.
+    let mut budget = TokenBucket::new(spectrum.messages_per_sec, Instant::now());
     let mut spectrum_seq: u64 = 0;
     let mut audio_seq: u64 = 0;
     let rate = spectrum.update_rate_hz.clamp(1.0, 10.0);
@@ -169,25 +186,18 @@ async fn session(
                 }
             }
             incoming = socket.recv() => {
+                if over_budget(incoming.as_ref(), &mut budget) {
+                    reject(&mut socket, "message rate exceeded").await;
+                    break;
+                }
                 match incoming {
                     Some(Ok(Message::Text(text))) => {
-                        match serde_json::from_str::<ClientMessage>(text.as_str()) {
-                            Ok(ClientMessage::Subscribe { stream }) => match stream {
-                                StreamKind::Spectrum => spectrum_on = true,
-                                StreamKind::Audio => audio_on = true,
-                            },
-                            Ok(ClientMessage::Unsubscribe { stream }) => match stream {
-                                StreamKind::Spectrum => spectrum_on = false,
-                                StreamKind::Audio => audio_on = false,
-                            },
-                            Ok(ClientMessage::Auth { .. }) => {} // already authenticated
-                            Err(_) => {
-                                let _ = send(
-                                    &mut socket,
-                                    &ServerMessage::Error { message: "bad message".to_owned() },
-                                )
-                                .await;
-                            }
+                        if !apply_control(text.as_str(), &mut spectrum_on, &mut audio_on) {
+                            let _ = send(
+                                &mut socket,
+                                &ServerMessage::Error { message: "bad message".to_owned() },
+                            )
+                            .await;
                         }
                     }
                     Some(Ok(Message::Binary(bytes))) => {
@@ -235,6 +245,37 @@ const AUTH_RECHECK_INTERVAL: Duration = Duration::from_secs(1);
 
 /// Authenticate the first message. Returns the claims **and the token**, which
 /// the session keeps so it can re-verify expiry and revocation as it runs.
+/// Apply a control message to the session's subscriptions. Returns false if the
+/// message could not be parsed, so the caller can report it.
+fn apply_control(text: &str, spectrum_on: &mut bool, audio_on: &mut bool) -> bool {
+    match serde_json::from_str::<ClientMessage>(text) {
+        Ok(ClientMessage::Subscribe { stream }) => {
+            match stream {
+                StreamKind::Spectrum => *spectrum_on = true,
+                StreamKind::Audio => *audio_on = true,
+            }
+            true
+        }
+        Ok(ClientMessage::Unsubscribe { stream }) => {
+            match stream {
+                StreamKind::Spectrum => *spectrum_on = false,
+                StreamKind::Audio => *audio_on = false,
+            }
+            true
+        }
+        Ok(ClientMessage::Auth { .. }) => true, // already authenticated
+        Err(_) => false,
+    }
+}
+
+/// Whether an inbound message puts the session over its message budget. Every
+/// text or binary frame costs one token, whatever its type; ping/pong and close
+/// are the transport's own traffic and are not charged.
+fn over_budget(incoming: Option<&Result<Message, axum::Error>>, budget: &mut TokenBucket) -> bool {
+    matches!(incoming, Some(Ok(Message::Text(_) | Message::Binary(_))))
+        && !budget.try_take(Instant::now())
+}
+
 /// Whether this session has already audited its TX stream. TX audio is a
 /// continuous stream, so the start and the first denial are recorded once per
 /// session — one event per 20 ms frame would bury the log without adding

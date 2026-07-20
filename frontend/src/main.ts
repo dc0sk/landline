@@ -60,7 +60,7 @@ function startTelemetry(): void {
   audioPlayer.start();
   telemetryClient = new TelemetryClient({
     url: wsUrl(),
-    token: tokens.accessToken,
+    token: () => session.current?.accessToken ?? null,
     connect: browserSocket,
     onFrame: (frame) => waterfallRenderer?.push(frame.bins),
     onAudio: (frame) => audioPlayer?.push(frame),
@@ -308,6 +308,11 @@ async function maybeRefresh(): Promise<void> {
     try {
       session.set(await api.refresh(tokens.refreshToken));
     } catch {
+      // Tear down before clearing: leaving telemetry running would keep the
+      // microphone, RX audio, and the socket alive behind a login screen, and
+      // a later sign-in would silently no-op because the orphaned client is
+      // still non-null.
+      stopTelemetry();
       session.clear();
       render();
     }

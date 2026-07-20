@@ -33,7 +33,7 @@ test("subscribes to spectrum only when onFrame is set", () => {
   const sockets: FakeSocket[] = [];
   const client = new TelemetryClient({
     url: "wss://x/ws",
-    token: "tok",
+    token: () => "tok",
     connect: () => {
       const s = new FakeSocket();
       sockets.push(s);
@@ -58,7 +58,7 @@ test("subscribes to both spectrum and audio when both handlers are set", () => {
   const audio: number[] = [];
   const client = new TelemetryClient({
     url: "wss://x/ws",
-    token: "tok",
+    token: () => "tok",
     connect: () => {
       const s = new FakeSocket();
       sockets.push(s);
@@ -98,7 +98,7 @@ test("surfaces server errors", () => {
   let seen = "";
   const client = new TelemetryClient({
     url: "wss://x/ws",
-    token: "t",
+    token: () => "t",
     connect: () => {
       const s = new FakeSocket();
       sockets.push(s);
@@ -114,4 +114,57 @@ test("surfaces server errors", () => {
   sockets[0]!.onopen!();
   sockets[0]!.onmessage!({ data: JSON.stringify({ type: "error", message: "nope" }) });
   assert.equal(seen, "nope");
+});
+
+test("reconnect authenticates with the current token, not the one at construction", () => {
+  // The socket reconnects for the life of the page. A token captured at
+  // construction is dead after the first refresh, so every later reconnect
+  // would authenticate with a stale credential and be rejected forever.
+  const sockets: FakeSocket[] = [];
+  let current: string | null = "first";
+  const client = new TelemetryClient({
+    url: "wss://x/ws",
+    token: () => current,
+    connect: () => {
+      const s = new FakeSocket();
+      sockets.push(s);
+      return s;
+    },
+    scheduler: { set: (fn) => { fn(); return 0 as TimerHandle; }, clear: () => {} },
+    onFrame: () => {},
+  });
+  client.start();
+  sockets[0]!.onopen!();
+  assert.deepEqual(JSON.parse(sockets[0]!.sent[0]!), { type: "auth", token: "first" });
+
+  // The session refreshes, then the socket drops and reconnects.
+  current = "second";
+  sockets[0]!.onclose!();
+  const reconnected = sockets[1]!;
+  reconnected.onopen!();
+  assert.deepEqual(JSON.parse(reconnected.sent[0]!), { type: "auth", token: "second" });
+});
+
+test("a reconnect with no session stops instead of looping unauthenticated", () => {
+  const sockets: FakeSocket[] = [];
+  let current: string | null = "tok";
+  const client = new TelemetryClient({
+    url: "wss://x/ws",
+    token: () => current,
+    connect: () => {
+      const s = new FakeSocket();
+      sockets.push(s);
+      return s;
+    },
+    scheduler: { set: (fn) => { fn(); return 0 as TimerHandle; }, clear: () => {} },
+    onFrame: () => {},
+  });
+  client.start();
+  sockets[0]!.onopen!();
+
+  current = null; // signed out
+  sockets[0]!.onclose!();
+  const reconnected = sockets[1]!;
+  reconnected.onopen!();
+  assert.deepEqual(reconnected.sent, [], "must not send an auth frame with no token");
 });

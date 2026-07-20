@@ -15,7 +15,13 @@ export interface SpectrumFrame {
 
 export interface TelemetryClientOptions {
   readonly url: string;
-  readonly token: string;
+  /**
+   * Supplies the current access token. A getter, not a value: the socket
+   * reconnects for the life of the page, and a token captured at construction
+   * is dead after the first refresh — every later reconnect would then
+   * authenticate with a stale credential and be rejected, forever.
+   */
+  readonly token: () => string | null;
   readonly connect: (url: string) => WebSocketLike;
   readonly onFrame?: (frame: SpectrumFrame) => void;
   readonly onAudio?: (frame: AudioFrame) => void;
@@ -25,7 +31,7 @@ export interface TelemetryClientOptions {
 
 export class TelemetryClient {
   private readonly socket: ReconnectingSocket;
-  private readonly token: string;
+  private readonly token: () => string | null;
   private readonly onFrame: ((frame: SpectrumFrame) => void) | undefined;
   private readonly onAudio: ((frame: AudioFrame) => void) | undefined;
   private readonly onError: ((message: string) => void) | undefined;
@@ -41,7 +47,13 @@ export class TelemetryClient {
       ...(options.scheduler ? { scheduler: options.scheduler } : {}),
       onStateChange: (state) => {
         if (state === "open") {
-          this.socket.send(JSON.stringify({ type: "auth", token: this.token }));
+          const token = this.token();
+          if (token === null) {
+            // No session left: stop rather than reconnect-loop unauthenticated.
+            this.socket.stop();
+            return;
+          }
+          this.socket.send(JSON.stringify({ type: "auth", token }));
         }
       },
       onMessage: (data) => this.handle(data),

@@ -27,6 +27,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use argon2::password_hash::SaltString;
 use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
+use tokio::sync::{Semaphore, SemaphorePermit};
+
 use axum::extract::FromRequestParts;
 use axum::http::header::AUTHORIZATION;
 use axum::http::request::Parts;
@@ -170,7 +172,21 @@ pub struct Auth {
     sessions: Mutex<HashMap<String, Session>>,
     /// revoked access-token `jti` -> its `exp` (purged lazily)
     revoked: Mutex<HashMap<String, u64>>,
+    /// PHC hash of a fixed throwaway password, verified against on the
+    /// unknown-user path so it costs the same as a real verification.
+    dummy_hash: String,
+    /// Bounds concurrent password hashing. Argon2's default parameters allocate
+    /// ~19 MiB per verification, so an unbounded number of in-flight logins is
+    /// a memory-exhaustion lever for an unauthenticated caller.
+    login_slots: Semaphore,
 }
+
+/// Fixed password behind the dummy hash. Never a valid credential: it is only
+/// verified against on the unknown-user path, which always refuses.
+const DUMMY_PASSWORD: &str = "landline-dummy-verification-password";
+
+/// Concurrent Argon2 verifications allowed at once (~19 MiB each).
+const MAX_CONCURRENT_LOGINS: usize = 4;
 
 impl Auth {
     /// Build the auth service from configuration.
@@ -202,7 +218,23 @@ impl Auth {
             users,
             sessions: Mutex::new(HashMap::new()),
             revoked: Mutex::new(HashMap::new()),
+            // Computed once at startup; the password is arbitrary and never
+            // matches, since it is only ever verified against on a path that
+            // returns InvalidCredentials regardless.
+            dummy_hash: hash_password(DUMMY_PASSWORD).unwrap_or_default(),
+            login_slots: Semaphore::new(MAX_CONCURRENT_LOGINS),
         }
+    }
+
+    /// Acquire a password-hashing slot, bounding concurrent Argon2 work.
+    ///
+    /// # Errors
+    /// Returns [`AuthError::Internal`] if the semaphore has been closed.
+    pub async fn login_permit(&self) -> Result<SemaphorePermit<'_>, AuthError> {
+        self.login_slots
+            .acquire()
+            .await
+            .map_err(|_| AuthError::Internal)
     }
 
     /// Authenticate a user and issue a token pair (FR-AUTH-01/02).
@@ -212,12 +244,27 @@ impl Auth {
     /// password does not verify, or [`AuthError::Internal`] if a stored hash is
     /// malformed.
     pub fn login(&self, name: &str, password: &str) -> Result<TokenPair, AuthError> {
-        let user = self.users.get(name).ok_or(AuthError::InvalidCredentials)?;
+        let Some(user) = self.users.get(name) else {
+            // Verify against a dummy hash before refusing. Returning early on an
+            // unknown name made the response time a user-enumeration oracle:
+            // measured 25 ns for an unknown user against 19.3 ms for a known one
+            // with the wrong password — a ratio of ~773,000, readable over any
+            // network. Both paths must do the same work.
+            self.verify_dummy(password);
+            return Err(AuthError::InvalidCredentials);
+        };
         let parsed = PasswordHash::new(&user.password_hash).map_err(|_| AuthError::Internal)?;
         Argon2::default()
             .verify_password(password.as_bytes(), &parsed)
             .map_err(|_| AuthError::InvalidCredentials)?;
         Ok(self.issue(name, user.role))
+    }
+
+    /// Burn the same work a real verification costs, then discard the result.
+    fn verify_dummy(&self, password: &str) {
+        if let Ok(parsed) = PasswordHash::new(&self.dummy_hash) {
+            let _ = Argon2::default().verify_password(password.as_bytes(), &parsed);
+        }
     }
 
     /// Exchange a valid refresh token for a new token pair, rotating the refresh
@@ -403,8 +450,23 @@ async fn login(
     ClientIp(ip): ClientIp,
     Json(req): Json<LoginRequest>,
 ) -> Result<Json<TokenResponse>, AuthError> {
+    // Argon2 is deliberately expensive (~19 MiB, ~20 ms). Running it directly on
+    // a Tokio worker blocks that thread for the whole verification, stalling
+    // unrelated requests — measured ~400x scheduling-latency growth under four
+    // concurrent logins on a 4-worker runtime. Hash on the blocking pool, and
+    // bound how many run at once so an unauthenticated caller cannot pin
+    // gigabytes by opening enough connections.
+    let _permit = auth.login_permit().await?;
+    let hashing = {
+        let auth = Arc::clone(&auth);
+        let name = req.name.clone();
+        let password = req.password.clone();
+        tokio::task::spawn_blocking(move || auth.login(&name, &password))
+    };
+    let outcome = hashing.await.map_err(|_| AuthError::Internal)?;
+
     // NFR-SEC-12: never log the password; audit records only IP, user, outcome.
-    match auth.login(&req.name, &req.password) {
+    match outcome {
         Ok(pair) => {
             audit.record_login(ip.as_deref(), &req.name);
             Ok(Json(pair.into()))

@@ -75,6 +75,12 @@ breaker_cooldown_ms = 1000
 enabled = false
 # GPIO character device. Default /dev/gpiochip0 (Pi 4 header); Pi 5's 40-pin
 # header is on /dev/gpiochip4. BCM pin number = line offset on that chip.
+# If `enabled` is true and the chip cannot be opened (wrong path — a Pi 5's
+# header is /dev/gpiochip4, not gpiochip0 — permissions, or line contention),
+# the service still starts but runs GPIO **degraded**: every pin operation
+# reports a hardware error instead of silently simulating success, `/healthz`
+# lists "gpio" under `degraded`, and the web UI says so. The rest of the
+# station is unaffected.
 # chip = "/dev/gpiochip0"
 # Only listed pins are reachable; every other pin is inaccessible (NFR-SEC-16).
 # Outputs are driven to `safe_state` at startup. direction: in|out, safe_state: low|high.

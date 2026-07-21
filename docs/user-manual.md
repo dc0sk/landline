@@ -1,7 +1,7 @@
 ---
 title: Operator User Manual
 status: Draft
-version: "1.1"
+version: "1.2"
 updated: 2026-07-21
 authors:
   - Simon Keimer (DC0SK)
@@ -135,6 +135,11 @@ direction, and current level:
   pin. The badge updates to confirm.
 - **Input** pins show a read-only level badge that refreshes automatically.
 
+If the station cannot reach its GPIO hardware, the panel shows **GPIO hardware is unavailable** and
+the pins are listed with an **UNKNOWN** level and disabled controls. Everything else — rig control,
+spectrum, audio — keeps working normally; only GPIO is affected. Report it to your administrator,
+who can check the GPIO chip path and permissions.
+
 Only pins your administrator has allowlisted appear or respond; every other pin is inaccessible.
 Each change is Operator-gated and recorded in the audit log. Pins are driven to a safe state when
 the service starts.
@@ -152,5 +157,6 @@ the service starts.
 | "audio codec not supported" message | Server built with Opus; the browser decodes uncompressed audio only | Ask your admin to run the server without the `opus` feature (see §7) |
 | Microphone unavailable on PTT | Browser mic permission denied, or non-secure page | Allow microphone access; use `https://` |
 | Rig control returns an error | Rig temporarily unreachable | Wait a moment and retry; tell your admin if it persists |
+| GPIO panel says hardware unavailable | The station could not open its GPIO chip | Everything else still works; ask your admin to check the GPIO chip path and permissions |
 
 For anything the manual doesn't cover, contact whoever administers your landline station.

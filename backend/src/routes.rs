@@ -5,8 +5,12 @@
 //! (ARC-06), audio (ARC-05) — are added by later Phase 1/2/3 actions and will
 //! sit behind the auth and security middleware.
 
-use axum::{routing::get, Json, Router};
+use std::sync::Arc;
+
+use axum::{routing::get, Extension, Json, Router};
 use serde::Serialize;
+
+use crate::gpio::GpioController;
 
 /// Build the application router.
 pub fn router() -> Router {
@@ -19,10 +23,23 @@ pub fn router() -> Router {
 #[derive(Serialize)]
 struct Health {
     status: &'static str,
+    /// Subsystems running degraded. Empty when everything is nominal. The probe
+    /// still reports `ok` — a degraded GPIO chip must not fail the health check
+    /// and get the whole station restarted — but the fault is visible to anyone
+    /// looking, instead of only appearing in a startup log line nobody re-reads.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    degraded: Vec<&'static str>,
 }
 
-async fn healthz() -> Json<Health> {
-    Json(Health { status: "ok" })
+async fn healthz(gpio: Option<Extension<Arc<GpioController>>>) -> Json<Health> {
+    let mut degraded = Vec::new();
+    if gpio.is_some_and(|Extension(gpio)| gpio.is_degraded()) {
+        degraded.push("gpio");
+    }
+    Json(Health {
+        status: "ok",
+        degraded,
+    })
 }
 
 /// Version/build metadata response.

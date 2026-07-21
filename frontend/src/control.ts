@@ -103,9 +103,17 @@ export interface GpioPin {
   readonly level: GpioLevel | null;
 }
 
+/** The GPIO panel's view of the station: the pin list, plus whether GPIO
+ *  hardware was expected but is unavailable. */
+export interface GpioStatus {
+  /** True when the station expected GPIO hardware it could not open. */
+  readonly degraded: boolean;
+  readonly pins: GpioPin[];
+}
+
 /** List the allowlisted GPIO pins with their current levels. */
-export async function listGpio(api: ApiClient, accessToken: string): Promise<GpioPin[]> {
-  return api.get<GpioPin[]>("/api/gpio", accessToken);
+export async function listGpio(api: ApiClient, accessToken: string): Promise<GpioStatus> {
+  return api.get<GpioStatus>("/api/gpio", accessToken);
 }
 
 /** Drive an output GPIO pin to a level (FR-GPIO-01). Requires the Operator role. */

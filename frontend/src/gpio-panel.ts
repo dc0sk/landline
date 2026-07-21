@@ -4,7 +4,7 @@
 // input-pin readings stay current.
 
 import type { ApiClient } from "./api.ts";
-import { listGpio, setGpio, toggledLevel, type GpioPin } from "./control.ts";
+import { listGpio, setGpio, toggledLevel, type GpioPin, type GpioStatus } from "./control.ts";
 
 export interface GpioPanelOptions {
   readonly container: HTMLElement;
@@ -48,29 +48,39 @@ export class GpioPanel {
     if (token === null) {
       return;
     }
-    let pins: GpioPin[];
+    let status: GpioStatus;
     try {
-      pins = await listGpio(this.api, token);
+      status = await listGpio(this.api, token);
     } catch {
       return; // GPIO disabled or unreachable — leave the panel as-is
     }
-    this.render(pins);
+    this.render(status);
   }
 
-  private render(pins: GpioPin[]): void {
+  private render(status: GpioStatus): void {
     this.container.replaceChildren();
-    if (pins.length === 0) {
+    if (status.degraded) {
+      // The station is up but its GPIO hardware is not. Say so plainly: the
+      // pins below cannot be driven, and showing them without this note would
+      // look like hardware that simply never changes state.
+      const warning = document.createElement("p");
+      warning.className = "gpio-degraded";
+      warning.textContent =
+        "GPIO hardware is unavailable — pins cannot be read or set. Ask your administrator to check the GPIO chip path and permissions.";
+      this.container.append(warning);
+    }
+    if (status.pins.length === 0) {
       const note = document.createElement("p");
       note.textContent = "No GPIO pins configured.";
       this.container.append(note);
       return;
     }
-    for (const pin of pins) {
-      this.container.append(this.row(pin));
+    for (const pin of status.pins) {
+      this.container.append(this.row(pin, status.degraded));
     }
   }
 
-  private row(pin: GpioPin): HTMLElement {
+  private row(pin: GpioPin, degraded: boolean): HTMLElement {
     const row = document.createElement("div");
     row.className = "gpio-row";
 
@@ -90,7 +100,7 @@ export class GpioPanel {
       button.type = "button";
       // With the level unknown there is no meaningful toggle target, so the
       // control is disabled rather than guessing a direction to drive.
-      button.disabled = pin.level === null;
+      button.disabled = degraded || pin.level === null;
       button.textContent = pin.level === "high" ? "Set LOW" : "Set HIGH";
       button.addEventListener("click", () => void this.toggle(pin));
       row.append(button);

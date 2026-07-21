@@ -130,28 +130,80 @@ impl PinBackend for MemoryBackend {
     }
 }
 
-/// Choose the pin backend: the real character-device backend when built with
-/// `--features gpio-device` and GPIO is enabled, otherwise in-memory. A failed
-/// hardware open degrades to in-memory rather than aborting startup.
-#[cfg(not(feature = "gpio-device"))]
-fn select_backend(config: &GpioConfig) -> Box<dyn PinBackend> {
-    Box::new(MemoryBackend::seeded(config))
+/// Backend used when GPIO hardware was expected but could not be opened. Every
+/// operation reports [`GpioError::Hardware`].
+///
+/// The service deliberately still starts — a misconfigured GPIO chip must not
+/// take rig control, spectrum, and audio down with it — but it must not *fake*
+/// working pins either. Falling back to [`MemoryBackend`] here would answer
+/// every read and write as though a wire moved, so the UI would show confident
+/// levels for pins connected to nothing.
+#[cfg(any(feature = "gpio-device", test))]
+struct UnavailableBackend;
+
+#[cfg(any(feature = "gpio-device", test))]
+impl PinBackend for UnavailableBackend {
+    fn read(&self, _pin: u8) -> Result<Level, GpioError> {
+        Err(GpioError::Hardware)
+    }
+
+    fn write(&self, _pin: u8, _level: Level) -> Result<(), GpioError> {
+        Err(GpioError::Hardware)
+    }
 }
 
+/// The chosen backend, and whether GPIO is running degraded (hardware expected
+/// but unavailable).
+struct BackendChoice {
+    backend: Box<dyn PinBackend>,
+    degraded: bool,
+}
+
+/// Choose the pin backend. Without the `gpio-device` feature this is the
+/// in-memory backend, which is the honest answer for a build that has no
+/// hardware access at all (development and tests).
+#[cfg(not(feature = "gpio-device"))]
+fn select_backend(config: &GpioConfig) -> BackendChoice {
+    BackendChoice {
+        backend: Box::new(MemoryBackend::seeded(config)),
+        degraded: false,
+    }
+}
+
+/// With `gpio-device`, an enabled `[gpio]` section means real hardware is
+/// expected. If it cannot be opened — wrong chip path (a Pi 5's header is
+/// `/dev/gpiochip4`, not `gpiochip0`), permissions, line contention — the
+/// service starts **degraded**: it keeps serving everything else, and every
+/// GPIO operation reports the fault instead of simulating success.
 #[cfg(feature = "gpio-device")]
-fn select_backend(config: &GpioConfig) -> Box<dyn PinBackend> {
+fn select_backend(config: &GpioConfig) -> BackendChoice {
     if config.enabled {
-        match device::GpiodBackend::new(config) {
+        return match device::GpiodBackend::new(config) {
             Ok(backend) => {
                 tracing::info!(pins = config.pins.len(), "gpio-device backend active");
-                return Box::new(backend);
+                BackendChoice {
+                    backend: Box::new(backend),
+                    degraded: false,
+                }
             }
             Err(err) => {
-                tracing::warn!(error = %err, "gpio hardware init failed; using in-memory backend");
+                tracing::error!(
+                    error = %err,
+                    chip = config.chip.as_deref().unwrap_or("/dev/gpiochip0"),
+                    "gpio hardware unavailable; serving degraded — GPIO operations will fail \
+                     until the chip path and permissions are corrected"
+                );
+                BackendChoice {
+                    backend: Box::new(UnavailableBackend),
+                    degraded: true,
+                }
             }
-        }
+        };
     }
-    Box::new(MemoryBackend::seeded(config))
+    BackendChoice {
+        backend: Box::new(MemoryBackend::seeded(config)),
+        degraded: false,
+    }
 }
 
 /// The GPIO controller (ARC-08): allowlist + safe-state enforcement over a
@@ -160,6 +212,7 @@ pub struct GpioController {
     enabled: bool,
     pins: HashMap<u8, PinSpec>,
     backend: Box<dyn PinBackend>,
+    degraded: bool,
 }
 
 impl GpioController {
@@ -176,11 +229,21 @@ impl GpioController {
                 },
             );
         }
+        let choice = select_backend(config);
         Self {
             enabled: config.enabled,
             pins,
-            backend: select_backend(config),
+            backend: choice.backend,
+            degraded: choice.degraded,
         }
+    }
+
+    /// Whether GPIO hardware was expected but is unavailable. Surfaced to
+    /// clients and on `/healthz` so a degraded station is visible rather than
+    /// looking like a station with pins that never change.
+    #[must_use]
+    pub fn is_degraded(&self) -> bool {
+        self.degraded
     }
 
     fn spec(&self, pin: u8) -> Result<&PinSpec, GpioError> {
@@ -335,7 +398,22 @@ async fn list_pins(
     if let Some(err) = audit.require_role(&user, Role::Operator, ip.as_deref(), "gpio.list") {
         return err;
     }
-    Json(gpio.list()).into_response()
+    Json(GpioListResponse {
+        degraded: gpio.is_degraded(),
+        pins: gpio.list(),
+    })
+    .into_response()
+}
+
+/// The `GET /api/gpio` body: the pin list plus whether GPIO is running
+/// degraded, so a client can say "hardware unavailable" rather than render pins
+/// that will never respond.
+#[derive(Serialize)]
+pub struct GpioListResponse {
+    /// True when GPIO hardware was expected but could not be opened.
+    pub degraded: bool,
+    /// Allowlisted pins, sorted by pin number.
+    pub pins: Vec<PinInfo>,
 }
 
 #[derive(Deserialize)]
@@ -386,7 +464,10 @@ async fn set_pin(
 
 #[cfg(test)]
 mod tests {
-    use super::{Direction, GpioController, GpioError, Level, MemoryBackend, PinBackend, PinSpec};
+    use super::{
+        Direction, GpioController, GpioError, Level, MemoryBackend, PinBackend, PinSpec,
+        UnavailableBackend,
+    };
     use crate::config::{GpioConfig, GpioPinConfig};
     use std::collections::HashMap;
 
@@ -426,7 +507,16 @@ mod tests {
             enabled: true,
             pins,
             backend,
+            degraded: false,
         }
+    }
+
+    /// As [`controller_with`], marked degraded — hardware was expected but could
+    /// not be opened.
+    fn degraded_controller() -> GpioController {
+        let mut c = controller_with(Box::new(UnavailableBackend));
+        c.degraded = true;
+        c
     }
 
     #[test]
@@ -566,5 +656,37 @@ mod tests {
             gpio.set(17, Level::High),
             Err(GpioError::Disabled)
         ));
+    }
+
+    #[test]
+    fn degraded_gpio_reports_failure_rather_than_simulating_success() {
+        // The station keeps running when the GPIO chip cannot be opened, but it
+        // must not pretend the pins work: falling back to the in-memory backend
+        // would answer every read and write as though a wire moved.
+        let gpio = degraded_controller();
+        assert!(gpio.is_degraded());
+        assert!(matches!(
+            gpio.set(17, Level::High),
+            Err(GpioError::Hardware)
+        ));
+        assert!(matches!(gpio.read(17), Err(GpioError::Hardware)));
+    }
+
+    #[test]
+    fn degraded_gpio_lists_pins_with_unknown_levels() {
+        // The pins are still listed — the operator should see what the station
+        // is configured for — but with no level, so the UI shows "unknown"
+        // rather than a confident value for a pin connected to nothing.
+        let gpio = degraded_controller();
+        let list = gpio.list();
+        assert_eq!(list.len(), 2);
+        assert!(list.iter().all(|info| info.level.is_none()));
+    }
+
+    #[test]
+    fn a_healthy_controller_is_not_degraded() {
+        // Negative control: `is_degraded` must track the hardware outcome, not
+        // return true for every controller.
+        assert!(!controller().is_degraded());
     }
 }

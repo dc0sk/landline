@@ -1,7 +1,7 @@
 ---
 title: "Test Strategy & Traceability"
 status: Draft
-version: "0.18"
+version: "0.19"
 updated: 2026-07-20
 authors:
   - Simon Keimer (DC0SK)
@@ -347,6 +347,7 @@ decode, BL-072), and the browser matrix.
 
 | Version | Date | Author | Summary |
 |---|---|---|---|
+| 0.19 | 2026-07-21 | DC0SK | GPIO hardware-init failure now runs degraded-but-honest (operator decision): the station keeps serving, GPIO reports the fault on every operation, /healthz and the UI surface it. Previously it silently simulated working pins. |
 | 0.18 | 2026-07-21 | DC0SK | WebSocket sessions now carry a per-session message budget and a concurrent-session cap; the HTTP limiter only ever ran on the upgrade. |
 | 0.17 | 2026-07-21 | DC0SK | Login hardened against user enumeration by timing (measured 773,000:1 before, ~1:1 after) and Argon2 moved off the async executor with a concurrency bound. |
 | 0.16 | 2026-07-21 | DC0SK | Every role-gated endpoint now audits its denials through one seam, and WebSocket TX audio is audited (accepted and denied). Closes the "blocked AND audited" gap in §2.4 for GPIO/frequency/mode and gives the WS TX path its first test. |

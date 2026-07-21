@@ -88,21 +88,31 @@ test("getSmeter reads the strength", async () => {
 });
 
 test("listGpio returns the pin list", async () => {
-  const pins = [{ pin: 17, direction: "out", level: "low" }];
-  const { seen, fetchMock } = recorder(pins);
+  const status = { degraded: false, pins: [{ pin: 17, direction: "out", level: "low" }] };
+  const { seen, fetchMock } = recorder(status);
   const api = new ApiClient({ baseUrl: "http://x", fetch: fetchMock, now: () => 0 });
-  assert.deepEqual(await listGpio(api, "tok"), pins);
+  assert.deepEqual(await listGpio(api, "tok"), status);
   assert.equal(seen.method, "GET");
+});
+
+test("listGpio reports a degraded station", async () => {
+  // The station runs when its GPIO chip cannot be opened, so the client has to
+  // be able to tell "no hardware" from "pins that happen to be low".
+  const { fetchMock } = recorder({ degraded: true, pins: [] });
+  const api = new ApiClient({ baseUrl: "http://x", fetch: fetchMock, now: () => 0 });
+  assert.equal((await listGpio(api, "tok")).degraded, true);
 });
 
 test("listGpio carries a null level through for an unreadable pin", async () => {
   // The backend sends level: null when the hardware read failed. It must reach
   // the caller as null, not be coerced to a level the pin may not be at.
-  const pins = [{ pin: 17, direction: "out", level: null }];
-  const { fetchMock } = recorder(pins);
+  const { fetchMock } = recorder({
+    degraded: false,
+    pins: [{ pin: 17, direction: "out", level: null }],
+  });
   const api = new ApiClient({ baseUrl: "http://x", fetch: fetchMock, now: () => 0 });
   const listed = await listGpio(api, "tok");
-  assert.equal(listed[0]?.level, null);
+  assert.equal(listed.pins[0]?.level, null);
 });
 
 test("setGpio POSTs the level to the pin path", async () => {

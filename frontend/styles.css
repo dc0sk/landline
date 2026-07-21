@@ -222,6 +222,15 @@ output {
   background: transparent;
 }
 
+/* Station is up, GPIO hardware is not — visibly a fault, not a quiet panel. */
+.gpio-degraded {
+  color: #3d2b00;
+  background: #f0b429;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+}
+
 /* Unreadable pin: visibly a fault, not a quiet "low". */
 .gpio-level.gpio-unknown {
   color: #3d2b00;
